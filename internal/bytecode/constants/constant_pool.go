@@ -1,5 +1,7 @@
 package constants
 
+import "strconv"
+
 type ConstantPool struct {
 	constants []Constant
 }
@@ -18,6 +20,14 @@ func (p *ConstantPool) AddConstant(c Constant) int32 {
 	idx := len(p.constants)
 	p.constants = append(p.constants, c)
 	return int32(idx)
+}
+
+func (p *ConstantPool) ExpectConstant(idx int32, tag ConstantTag) Constant {
+	constant := p.constants[idx]
+	if constant.GetTag() != tag {
+		panic("Expected constant type " + strconv.Itoa(int(tag)) + " got " + strconv.Itoa(int(constant.GetTag())))
+	}
+	return constant
 }
 
 func (p *ConstantPool) GetConstant(idx int32) Constant {

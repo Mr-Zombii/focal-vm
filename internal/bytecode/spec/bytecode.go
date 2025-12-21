@@ -89,6 +89,10 @@ func NewBCFunction(module *BCModule, nameIdx int32, modifier uint8, code []uint8
 	}
 }
 
+func (bcf *BCFunction) GetName() string {
+	return bcf.module.GetConstantPool().ExpectConstant(bcf.nameIdx, constants.ConstantTagUTF8String).(*constants.ConstantUTF8String).GetValue()
+}
+
 func (bcf *BCFunction) GetModule() *BCModule {
 	return bcf.module
 }
