@@ -5,6 +5,8 @@ import (
 	"focal-lang/internal/bytecode/spec"
 	"focal-lang/internal/vm/api"
 	"focal-lang/internal/vm/runtime"
+	"focal-lang/internal/vm/runtime/builtins"
+	"focal-lang/internal/vm/runtime/opload"
 	"focal-lang/internal/vm/stack"
 	"io"
 	"os"
@@ -16,6 +18,7 @@ type VM struct {
 	modMap       map[string]*spec.BCModule
 	opcodeMap    []api.OpcodeImpl
 	currentFrame api.Frame
+	scope        api.Scope
 }
 
 func NewVM() api.VM {
@@ -23,9 +26,11 @@ func NewVM() api.VM {
 		stack:     stack.NewStack(),
 		callStack: stack.NewCallStack(),
 		modMap:    map[string]*spec.BCModule{},
+		scope:     runtime.NewScope(),
 	}
 
-	runtime.InstallOpcodes(vm)
+	opload.InstallOpcodes(vm)
+	builtins.Register(vm)
 
 	return vm
 }
@@ -76,13 +81,13 @@ func (vm *VM) AddModule(module *spec.BCModule) {
 func (vm *VM) Run(moduleName string) {
 	mod, ok := vm.modMap[moduleName]
 	if !ok {
-		panic("Tried to load main function from non-existant module \"" + moduleName + "\"!")
+		panic("Tried to load main function from non-existent module \"" + moduleName + "\"!")
 	}
 	fun := mod.GetFunction("main")
 	if fun == nil {
 		panic("Function main does not exist in module \"" + moduleName + "\"!")
 	}
-	frame := runtime.NewFrame(mod, fun)
+	frame := runtime.NewFrame(vm.scope, mod, fun)
 	vm.callStack.PushFrame(frame)
 
 	for vm.callStack.GetPointer() != -1 {
@@ -97,4 +102,8 @@ func (vm *VM) Run(moduleName string) {
 		opcodeImpl(vm, vm.currentFrame)
 	}
 
+}
+
+func (vm *VM) GetScope() api.Scope {
+	return vm.scope
 }

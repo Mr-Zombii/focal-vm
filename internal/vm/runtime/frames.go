@@ -14,19 +14,22 @@ type Frame struct {
 	locals map[string]api.Value
 	code   []uint8
 	ptr    int32
+
+	scope api.Scope
 }
 
-func NewFrame(module *spec.BCModule, fn *spec.BCFunction) api.Frame {
+func NewFrame(parentScope api.Scope, module *spec.BCModule, fn *spec.BCFunction) api.Frame {
 	frame := &Frame{locals: map[string]api.Value{}}
 	frame.fun = fn
 	frame.module = module
 	frame.cpool = module.GetConstantPool()
+	frame.scope = parentScope.NewChildScope()
 	frame.LoadFn(fn)
 	return frame
 }
 
 func (f *Frame) NewChildFrame(module *spec.BCModule, fn *spec.BCFunction) api.Frame {
-	frame := NewFrame(module, fn).(*Frame)
+	frame := NewFrame(f.scope, module, fn).(*Frame)
 	frame.parent = f
 	return frame
 }
@@ -60,36 +63,6 @@ func (f *Frame) GetModule() *spec.BCModule {
 	return f.module
 }
 
-func (f *Frame) LocalExist(n string) bool {
-	_, ok := f.locals[n]
-	if !ok && f.parent != nil {
-		return f.parent.LocalExist(n)
-	}
-	return ok
-}
-
-func (f *Frame) GetLocal(n string) api.Value {
-	v, ok := f.locals[n]
-	if !ok && f.parent != nil {
-		return f.parent.GetLocal(n)
-	}
-	return v
-}
-
-func (f *Frame) setLocalInternal(n string, v api.Value) {
-	_, ok := f.locals[n]
-	if !ok && f.parent != nil {
-		f.parent.(*Frame).setLocalInternal(n, v)
-		return
-	}
-	f.locals[n] = v
-}
-
-func (f *Frame) SetLocal(n string, v api.Value) {
-	if f.LocalExist(n) {
-		f.setLocalInternal(n, v)
-		return
-	}
-
-	f.locals[n] = v
+func (f *Frame) GetScope() api.Scope {
+	return f.scope
 }

@@ -42,7 +42,7 @@ func (br *ModuleReader) ReadModule() *spec.BCModule {
 	funcCount := br.readU32LE()
 	funArray := make([]*spec.BCFunction, funcCount)
 	for i := range funcCount {
-		funArray[i] = br.readFunction()
+		funArray[i] = br.readFunction(module)
 	}
 	module.SetFunctions(funArray)
 
@@ -76,13 +76,13 @@ func (br *ModuleReader) readConstantPool() *constants.ConstantPool {
 	return pool
 }
 
-func (br *ModuleReader) readFunction() *spec.BCFunction {
+func (br *ModuleReader) readFunction(module *spec.BCModule) *spec.BCFunction {
 	nameIdx := br.readU32LE()
 	modifier := br.readU8LE()
 	codeLen := br.readU32LE()
 	code := br.readU8ArrLE(int32(codeLen))
 
-	return spec.NewBCFunction(int32(nameIdx), modifier, code)
+	return spec.NewBCFunction(module, int32(nameIdx), modifier, code)
 }
 
 func (br *ModuleReader) skip(n int32) {

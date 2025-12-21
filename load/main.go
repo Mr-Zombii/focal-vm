@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	f, _ := os.OpenFile("out.fbc", os.O_RDONLY, 0)
+	f, _ := os.OpenFile("test.fbc", os.O_RDONLY, 0)
 	in, _ := io.ReadAll(f)
 	f.Close()
 

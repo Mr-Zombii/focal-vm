@@ -74,17 +74,23 @@ const (
 )
 
 type BCFunction struct {
+	module   *BCModule
 	nameIdx  int32
 	modifier uint8
 	code     []uint8
 }
 
-func NewBCFunction(nameIdx int32, modifier uint8, code []uint8) *BCFunction {
+func NewBCFunction(module *BCModule, nameIdx int32, modifier uint8, code []uint8) *BCFunction {
 	return &BCFunction{
+		module:   module,
 		nameIdx:  nameIdx,
 		modifier: modifier,
 		code:     code,
 	}
+}
+
+func (bcf *BCFunction) GetModule() *BCModule {
+	return bcf.module
 }
 
 func (bcf *BCFunction) GetNameIndex() int32 {

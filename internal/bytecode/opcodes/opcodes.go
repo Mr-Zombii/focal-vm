@@ -4,33 +4,28 @@ type OpCode uint8
 
 const (
 	OP_NOP OpCode = iota
-	// Constants
-	OP_CLOAD1 // Load Constant 1 byte
-	OP_CLOAD2 // Load Constant 2 bytes
-	OP_CLOAD3 // Load Constant 3 bytes
-	OP_CLOAD4 // Load Constant 4 bytes
 
-	OP_LSTORE1 // Store Local
-	OP_LSTORE2 // Store Local
-	OP_LSTORE3 // Store Local
-	OP_LSTORE4 // Store Local
-	OP_LLOAD1  // Load Local
-	OP_LLOAD2  // Load Local
-	OP_LLOAD3  // Load Local
-	OP_LLOAD4  // Load Local
+	// Load & Store
+	OP_CLOAD   // Load constant
+	OP_VSTORE  // Store to local/global
+	OP_VLOAD   // Load local/global
+	OP_DGLOBAL // Define global
+	OP_DLOCAL  // Define local
+	OP_FLOAD   // Load Function
 
-	OP_GLOAD  // Load from Global
-	OP_GSTORE // Store to Global
+	OP_NEWARRAY
 
-	OP_DUP // Duplicate Stack Value
-	OP_SWP // Swap 2 Stack Values
+	// Stack
+	OP_DUP // Duplicate stack value
+	OP_SWP // Swap 2 stack values
+	OP_POP // Discard top stack Value
 
 	// Integer Math
 	OP_IADD // Add Integer
 	OP_ISUB // Subtract Integer
 	OP_IMUL // Mutiply Integer
 	OP_IDIV // Divide Integer
-	OP_MOD  // Modulus
+	OP_IMOD // Modulus
 
 	// Basic Logic
 	OP_EQ  // Equals
@@ -72,22 +67,7 @@ const (
 
 	// Control Flow
 	OP_RET // Return from Frame
-	OP_CALL11
-	OP_CALL12
-	OP_CALL13
-	OP_CALL14
-	OP_CALL21
-	OP_CALL22
-	OP_CALL23
-	OP_CALL24
-	OP_CALL31
-	OP_CALL32
-	OP_CALL33
-	OP_CALL34
-	OP_CALL41
-	OP_CALL42
-	OP_CALL43
-	OP_CALL44
+	OP_CALL
 	OP_TCALL // Call Frame by Name
 	OP_SCALL // Call Child Frame by Name
 	OP_JMP   // Relative Jump

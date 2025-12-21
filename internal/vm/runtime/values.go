@@ -3,6 +3,7 @@ package runtime
 import (
 	"fmt"
 	"focal-lang/internal/bytecode/constants"
+	"focal-lang/internal/bytecode/spec"
 	"focal-lang/internal/vm/api"
 	"strconv"
 )
@@ -25,7 +26,63 @@ const (
 	ValueTagUTF8String
 
 	ValueTagArray
+
+	ValueTagFunction
 )
+
+type NativeFunctionValue struct {
+	function func(api.VM)
+}
+
+func NewNativeFunction(fn func(api.VM)) *NativeFunctionValue {
+	return &NativeFunctionValue{function: fn}
+}
+
+func (v *NativeFunctionValue) Call(vm api.VM) {
+	v.function(vm)
+}
+
+func (v *NativeFunctionValue) GetTag() api.ValueTag {
+	return ValueTagFunction
+}
+
+func (v *NativeFunctionValue) GetFunction() func(api.VM) {
+	return v.function
+}
+
+func (v *NativeFunctionValue) String() string {
+	return "Native"
+}
+
+type FunctionValue struct {
+	parent   api.Scope
+	function *spec.BCFunction
+}
+
+func NewFunction(parent api.Scope, function *spec.BCFunction) *FunctionValue {
+	return &FunctionValue{parent: parent, function: function}
+}
+
+func (v *FunctionValue) Call(vm api.VM) {
+	parentScope := v.parent
+	if parentScope == nil {
+		parentScope = vm.GetScope()
+	}
+	frame := NewFrame(parentScope, v.function.GetModule(), v.function)
+	vm.GetCallStack().PushFrame(frame)
+}
+
+func (v *FunctionValue) GetTag() api.ValueTag {
+	return ValueTagFunction
+}
+
+func (v *FunctionValue) GetFunction() *spec.BCFunction {
+	return v.function
+}
+
+func (v *FunctionValue) String() string {
+	return v.function.GetModule().GetName() + " -> " + v.function.GetModule().GetConstantPool().GetConstant(v.function.GetNameIndex()).(*constants.ConstantUTF8String).GetValue()
+}
 
 type ArrayValue struct {
 	value []api.Value

@@ -92,32 +92,36 @@ func main() {
 
 	bcm2 := spec.NewBCModule(1, 0, "test", 0, constants.NewConstantPool())
 
-	bcm2.SetFunctions([]*spec.BCFunction{spec.NewBCFunction(bcm2.GetConstantPool().GetOrCreateUTF8("loadMe"), spec.BCFunctionModPub, []uint8{
-		uint8(opcodes.OP_CLOAD1),
+	bcm2.SetFunctions([]*spec.BCFunction{spec.NewBCFunction(bcm2, bcm2.GetConstantPool().GetOrCreateUTF8("loadMe"), spec.BCFunctionModPub, []uint8{
+		uint8(opcodes.OP_CLOAD),
+		uint8(0),
 		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("Hi from \"test\" module!")),
 
-		uint8(opcodes.OP_PRINT),
+		uint8(opcodes.OP_VLOAD),
+		uint8(0),
+		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("print")),
+		uint8(opcodes.OP_CALL),
 		uint8(opcodes.OP_RET),
 	})})
 
 	bcm := spec.NewBCModule(1, 0, "bootstrap", 0, constants.NewConstantPool())
 	testIdx := uint32(bcm.GetConstantPool().GetOrCreateUTF8("test"))
 	loadMeIdx := uint32(bcm.GetConstantPool().GetOrCreateUTF8("loadMe"))
-	bcm.SetFunctions([]*spec.BCFunction{spec.NewBCFunction(bcm.GetConstantPool().GetOrCreateUTF8("main"), spec.BCFunctionModPub, []uint8{
-		uint8(opcodes.OP_CLOAD1),
+	bcm.SetFunctions([]*spec.BCFunction{spec.NewBCFunction(bcm, bcm.GetConstantPool().GetOrCreateUTF8("main"), spec.BCFunctionModPub, []uint8{
+		uint8(opcodes.OP_CLOAD),
+		uint8(0),
 		uint8(bcm.GetConstantPool().GetOrCreateUTF8("Hi from \"boostrap\" module!")),
 
-		uint8(opcodes.OP_PRINT),
+		uint8(opcodes.OP_VLOAD),
+		uint8(0),
+		uint8(bcm.GetConstantPool().GetOrCreateUTF8("print")),
+		uint8(opcodes.OP_CALL),
 
-		uint8(opcodes.OP_CALL44),
-		uint8(testIdx >> 24),
-		uint8(testIdx >> 16),
-		uint8(testIdx >> 8),
+		uint8(opcodes.OP_FLOAD),
+		uint8(0),
 		uint8(testIdx),
-		uint8(loadMeIdx >> 24),
-		uint8(loadMeIdx >> 16),
-		uint8(loadMeIdx >> 8),
 		uint8(loadMeIdx),
+		uint8(opcodes.OP_CALL),
 
 		uint8(opcodes.OP_RET),
 	})})
