@@ -11,7 +11,9 @@ const (
 	OP_VLOAD   // Load local/global
 	OP_DGLOBAL // Define global
 	OP_DLOCAL  // Define local
-	OP_FLOAD   // Load Function
+	OP_FLOAD   // Load function
+	OP_ALOAD   // Load array element
+	OP_ASTORE  // Store element to array
 
 	OP_NEWARRAY
 
