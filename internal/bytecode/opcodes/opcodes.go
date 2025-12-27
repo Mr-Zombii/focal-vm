@@ -6,21 +6,21 @@ const (
 	OP_NOP OpCode = iota
 
 	// Load & Store
-	OP_CLOAD   // Load constant
-	OP_VSTORE  // Store to local/global
-	OP_VLOAD   // Load local/global
-	OP_DGLOBAL // Define global
-	OP_DLOCAL  // Define local
-	OP_FLOAD   // Load function
-	OP_ALOAD   // Load array element
-	OP_ASTORE  // Store element to array
+	OP_CLOAD   //✅ Load constant
+	OP_VSTORE  //✅ Store to local/global
+	OP_VLOAD   //✅ Load local/global
+	OP_DGLOBAL //✅ Define global
+	OP_DLOCAL  //✅ Define local
+	OP_FLOAD   //✅ Load function
+	OP_ALOAD   //✅ Load array element
+	OP_ASTORE  //✅ Store element to array
 
-	OP_NEWARRAY
+	OP_NEWARRAY // ✅
 
 	// Stack
-	OP_DUP // Duplicate stack value
-	OP_SWP // Swap 2 stack values
-	OP_POP // Discard top stack Value
+	OP_DUP // ✅ Duplicate stack value
+	OP_SWP // ✅ Swap 2 stack values
+	OP_POP // ✅ Discard top stack Value
 
 	// Integer Math
 	OP_IADD // Add Integer
@@ -68,8 +68,8 @@ const (
 	OP_FGE // Greater Than Equals Float
 
 	// Control Flow
-	OP_RET // Return from Frame
-	OP_CALL
+	OP_RET   // Return from Frame
+	OP_CALL  // ✅ Call on Object
 	OP_TCALL // Call Frame by Name
 	OP_SCALL // Call Child Frame by Name
 	OP_JMP   // Relative Jump
