@@ -1,8 +1,8 @@
-package api
+package runtimeapi
 
 import (
-	"focal-lang/internal/bytecode/constants"
-	"focal-lang/internal/bytecode/spec"
+	"focal-vm/internal/bytecode/constants"
+	"focal-vm/internal/bytecode/spec"
 )
 
 type Frame interface {
@@ -12,7 +12,9 @@ type Frame interface {
 	GetPtr() int32
 	SetPtr(int32)
 	GetConstantPool() *constants.ConstantPool
-	GetFunction() *spec.BCFunction
-	GetModule() *spec.BCModule
+
+	GetFunctionName() string
+	GetModuleName() string
 	GetScope() Scope
+	GetCaller() Frame
 }

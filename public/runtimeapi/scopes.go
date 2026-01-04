@@ -1,4 +1,4 @@
-package api
+package runtimeapi
 
 type Scope interface {
 	HasLocal(string) bool
@@ -9,4 +9,5 @@ type Scope interface {
 
 	NewChildScope() Scope
 	GetParent() Scope
+	Reset()
 }

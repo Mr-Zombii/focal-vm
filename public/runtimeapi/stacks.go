@@ -1,6 +1,6 @@
-package api
+package runtimeapi
 
-import "focal-lang/internal/bytecode/constants"
+import "focal-vm/internal/bytecode/constants"
 
 type CallStack interface {
 	GetPointer() int32

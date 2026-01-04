@@ -1,10 +1,10 @@
 package main
 
 import (
-	"focal-lang/internal/bytecode/bcio"
-	"focal-lang/internal/bytecode/constants"
-	"focal-lang/internal/bytecode/opcodes"
-	"focal-lang/internal/bytecode/spec"
+	"focal-vm/internal/bytecode/bcio"
+	"focal-vm/internal/bytecode/constants"
+	"focal-vm/internal/bytecode/opcodes"
+	"focal-vm/internal/bytecode/spec"
 	"os"
 )
 
@@ -95,12 +95,32 @@ func main() {
 	bcm2.SetFunctions([]*spec.BCFunction{spec.NewBCFunction(bcm2, bcm2.GetConstantPool().GetOrCreateUTF8("loadMe"), spec.BCFunctionModPub, []uint8{
 		uint8(opcodes.OP_CLOAD),
 		uint8(0),
-		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("Hi from \"test\" module!")),
+		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("Hi from \"test\" module!\n")),
 
 		uint8(opcodes.OP_VLOAD),
 		uint8(0),
-		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("print")),
+		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("_builtin_print")),
 		uint8(opcodes.OP_CALL),
+
+		uint8(opcodes.OP_VLOAD),
+		uint8(0),
+		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("_builtin_read_line")),
+		uint8(opcodes.OP_CALL),
+
+		uint8(opcodes.OP_VLOAD),
+		uint8(0),
+		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("_builtin_print")),
+		uint8(opcodes.OP_CALL),
+
+		uint8(opcodes.OP_CLOAD),
+		uint8(0),
+		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("\n")),
+
+		uint8(opcodes.OP_VLOAD),
+		uint8(0),
+		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("_builtin_print")),
+		uint8(opcodes.OP_CALL),
+
 		uint8(opcodes.OP_RET),
 	})})
 
@@ -108,13 +128,24 @@ func main() {
 	testIdx := uint32(bcm.GetConstantPool().GetOrCreateUTF8("test"))
 	loadMeIdx := uint32(bcm.GetConstantPool().GetOrCreateUTF8("loadMe"))
 	bcm.SetFunctions([]*spec.BCFunction{spec.NewBCFunction(bcm, bcm.GetConstantPool().GetOrCreateUTF8("main"), spec.BCFunctionModPub, []uint8{
+		//uint8(opcodes.OP_CLOAD),
+		//uint8(0),
+		//uint8(bcm.GetConstantPool().GetOrCreateUTF8("RegisterLunnoNativeFunctions")),
+		//uint8(opcodes.OP_CLOAD),
+		//uint8(0),
+		//uint8(bcm.GetConstantPool().GetOrCreateUTF8("./testplugin/testplugin.so")),
+		//uint8(opcodes.OP_VLOAD),
+		//uint8(0),
+		//uint8(bcm.GetConstantPool().GetOrCreateUTF8("loadPlugin")),
+		//uint8(opcodes.OP_CALL),
+
 		uint8(opcodes.OP_CLOAD),
 		uint8(0),
-		uint8(bcm.GetConstantPool().GetOrCreateUTF8("Hi from \"boostrap\" module!")),
+		uint8(bcm.GetConstantPool().GetOrCreateUTF8("Hi from \"boostrap\" module!\n")),
 
 		uint8(opcodes.OP_VLOAD),
 		uint8(0),
-		uint8(bcm.GetConstantPool().GetOrCreateUTF8("print")),
+		uint8(bcm.GetConstantPool().GetOrCreateUTF8("_builtin_print")),
 		uint8(opcodes.OP_CALL),
 
 		uint8(opcodes.OP_FLOAD),

@@ -34,6 +34,17 @@ func (p *ConstantPool) GetConstant(idx int32) Constant {
 	return p.constants[idx]
 }
 
+func (p *ConstantPool) GetOrCreateBool(value bool) int32 {
+	for i, v := range p.constants {
+		v, ok := v.(*ConstantBoolean)
+		if ok && v.value == value {
+			return int32(i)
+		}
+	}
+
+	return p.AddConstant(NewBooleanConstant(value))
+}
+
 func (p *ConstantPool) GetOrCreateI8(value int8) int32 {
 	for i, v := range p.constants {
 		v, ok := v.(*ConstantInt8)

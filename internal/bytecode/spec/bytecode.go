@@ -1,8 +1,8 @@
 package spec
 
-import "focal-lang/internal/bytecode/constants"
+import "focal-vm/internal/bytecode/constants"
 
-var BC_MAGIC []uint8 = []uint8([]byte("FOCALS"))
+var BC_MAGIC = []byte("FOCALS")
 
 type BCModule struct {
 	magic []uint8

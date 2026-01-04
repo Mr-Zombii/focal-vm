@@ -1,20 +1,24 @@
 package builtins
 
 import (
-	"fmt"
-	"focal-lang/internal/vm/api"
-	"focal-lang/internal/vm/runtime"
+	"focal-vm/internal/vm/runtime"
+	"focal-vm/internal/vm/runtime/ffi"
+	"focal-vm/public/runtimeapi"
 )
 
-func Register(vm api.VM) {
-	value := runtime.NewNativeFunction(func(v api.VM) {
-		value := v.GetStack().PopValue()
-		caller := v.GetCallStack().GetTopFrame()
-		callerModule := caller.GetModule()
+func Register(vm runtimeapi.VM) {
+	RegisterLunno(vm)
 
-		fnName := caller.GetFunction().GetName()
-		fmt.Println("Called from \"" + fnName + "\" in module \"" + callerModule.GetName() + "\"")
-		fmt.Println(value)
+	pluginloader := runtime.NewNativeFunction(func(v runtimeapi.VM) {
+		pluginName := v.GetStack().PopValue().(*runtime.UTF8StringValue).GetValue()
+		loadedPlugin := v.LoadPlugin(pluginName)
+		fnSymbol := v.GetStack().PopValue().(*runtime.UTF8StringValue).GetValue()
+		lookup, err := loadedPlugin.Lookup(fnSymbol)
+		if err != nil {
+			v.Panic("Error loading plugin: " + err.Error())
+			return
+		}
+		ffi.CallForeignFunction(v, lookup)
 	})
-	vm.GetScope().SetLocal("print", value)
+	vm.GetScope().SetLocal("_builtin_load_plugin", pluginloader)
 }

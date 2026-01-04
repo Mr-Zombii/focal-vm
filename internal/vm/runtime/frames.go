@@ -1,35 +1,49 @@
 package runtime
 
 import (
-	"focal-lang/internal/bytecode/constants"
-	"focal-lang/internal/bytecode/spec"
-	"focal-lang/internal/vm/api"
+	"focal-vm/internal/bytecode/constants"
+	"focal-vm/internal/bytecode/opcodes"
+	"focal-vm/internal/bytecode/spec"
+	"focal-vm/public/runtimeapi"
 )
 
 type Frame struct {
-	parent api.Frame
-	module *spec.BCModule
-	fun    *spec.BCFunction
-	cpool  *constants.ConstantPool
-	locals map[string]api.Value
-	code   []uint8
-	ptr    int32
+	parent       runtimeapi.Frame
+	caller       runtimeapi.Frame
+	moduleName   string
+	functionName string
+	cpool        *constants.ConstantPool
+	code         []uint8
+	ptr          int32
 
-	scope api.Scope
+	scope runtimeapi.Scope
 }
 
-func NewFrame(parentScope api.Scope, module *spec.BCModule, fn *spec.BCFunction) api.Frame {
-	frame := &Frame{locals: map[string]api.Value{}}
-	frame.fun = fn
-	frame.module = module
+func NewPseudoFrame(caller runtimeapi.Frame, parentScope runtimeapi.Scope, moduleName string, functionName string) *Frame {
+	frame := &Frame{}
+	frame.caller = caller
+	frame.scope = parentScope.NewChildScope()
+	frame.moduleName = moduleName
+	frame.functionName = functionName
+	frame.code = []uint8{
+		uint8(opcodes.OP_RET),
+	}
+	return frame
+}
+
+func NewFrame(caller runtimeapi.Frame, parentScope runtimeapi.Scope, module *spec.BCModule, fn *spec.BCFunction) runtimeapi.Frame {
+	frame := &Frame{}
+	frame.caller = caller
+	frame.functionName = fn.GetName()
+	frame.moduleName = module.GetName()
 	frame.cpool = module.GetConstantPool()
 	frame.scope = parentScope.NewChildScope()
 	frame.LoadFn(fn)
 	return frame
 }
 
-func (f *Frame) NewChildFrame(module *spec.BCModule, fn *spec.BCFunction) api.Frame {
-	frame := NewFrame(f.scope, module, fn).(*Frame)
+func (f *Frame) NewChildFrame(module *spec.BCModule, fn *spec.BCFunction) runtimeapi.Frame {
+	frame := NewFrame(f, f.scope, module, fn).(*Frame)
 	frame.parent = f
 	return frame
 }
@@ -37,6 +51,10 @@ func (f *Frame) NewChildFrame(module *spec.BCModule, fn *spec.BCFunction) api.Fr
 func (f *Frame) LoadFn(fn *spec.BCFunction) {
 	f.code = fn.GetCode()
 	f.ptr = 0
+	f.scope.Reset()
+	f.functionName = fn.GetName()
+	f.moduleName = fn.GetModule().GetName()
+	f.cpool = fn.GetModule().GetConstantPool()
 }
 
 func (f *Frame) GetCode() *[]uint8 {
@@ -55,14 +73,18 @@ func (f *Frame) GetConstantPool() *constants.ConstantPool {
 	return f.cpool
 }
 
-func (f *Frame) GetFunction() *spec.BCFunction {
-	return f.fun
+func (f *Frame) GetModuleName() string {
+	return f.moduleName
 }
 
-func (f *Frame) GetModule() *spec.BCModule {
-	return f.module
+func (f *Frame) GetFunctionName() string {
+	return f.functionName
 }
 
-func (f *Frame) GetScope() api.Scope {
+func (f *Frame) GetScope() runtimeapi.Scope {
 	return f.scope
+}
+
+func (f *Frame) GetCaller() runtimeapi.Frame {
+	return f.caller
 }

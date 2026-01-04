@@ -1,6 +1,6 @@
 package main
 
-import "focal-lang/internal/vm"
+import "focal-vm/internal/vm"
 
 func main() {
 	vm := vm.NewVM()

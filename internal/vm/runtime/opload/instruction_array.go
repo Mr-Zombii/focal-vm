@@ -1,18 +1,18 @@
 package opload
 
 import (
-	"focal-lang/internal/bytecode/opcodes"
-	"focal-lang/internal/vm/api"
-	"focal-lang/internal/vm/runtime"
+	"focal-vm/internal/bytecode/opcodes"
+	"focal-vm/internal/vm/runtime"
+	"focal-vm/public/runtimeapi"
 )
 
-func installArray(opcodeMap []api.OpcodeImpl) {
+func installArray(opcodeMap []runtimeapi.OpcodeImpl) {
 	opcodeMap[opcodes.OP_NEWARRAY] = execNEWARRAY
 	opcodeMap[opcodes.OP_ALOAD] = execALOAD
 	opcodeMap[opcodes.OP_ASTORE] = execASTORE
 }
 
-func execNEWARRAY(vm api.VM, frame api.Frame) {
+func execNEWARRAY(vm runtimeapi.VM, frame runtimeapi.Frame) {
 	//ptr := frame.GetPtr()
 	//code := *frame.GetCode()
 
@@ -25,18 +25,18 @@ func execNEWARRAY(vm api.VM, frame api.Frame) {
 	//frame.SetPtr(ptr)
 
 	size := vm.GetStack().PopValue().(*runtime.Int32Value)
-	backing := make([]api.Value, size.GetValue())
+	backing := make([]runtimeapi.Value, size.GetValue())
 	vm.GetStack().PushValue(runtime.NewArrayValue(backing))
 }
 
-func execALOAD(vm api.VM, frame api.Frame) {
+func execALOAD(vm runtimeapi.VM, frame runtimeapi.Frame) {
 	idx := vm.GetStack().PopValue().(*runtime.Int32Value).GetValue()
 	arr := vm.GetStack().PopValue().(*runtime.ArrayValue).GetValue()
 
 	vm.GetStack().PushValue(arr[idx])
 }
 
-func execASTORE(vm api.VM, frame api.Frame) {
+func execASTORE(vm runtimeapi.VM, frame runtimeapi.Frame) {
 	val := vm.GetStack().PopValue()
 	idx := vm.GetStack().PopValue().(*runtime.Int32Value).GetValue()
 	arr := vm.GetStack().PopValue().(*runtime.ArrayValue).GetValue()

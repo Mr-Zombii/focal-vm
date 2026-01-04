@@ -1,8 +1,8 @@
 package bcio
 
 import (
-	"focal-lang/internal/bytecode/constants"
-	"focal-lang/internal/bytecode/spec"
+	"focal-vm/internal/bytecode/constants"
+	"focal-vm/internal/bytecode/spec"
 	"math"
 	"strconv"
 )
@@ -42,6 +42,12 @@ func (mw *ModuleWriter) writeConstantPool(pool *constants.ConstantPool) {
 		constant := pool.GetConstant(i)
 		mw.writeU8LE(uint8(constant.GetTag()))
 		switch con := constant.(type) {
+		case *constants.ConstantBoolean:
+			if con.GetValue() {
+				mw.writeU8LE(1)
+				continue
+			}
+			mw.writeU8LE(0)
 		case *constants.ConstantInt8:
 			mw.writeU8LE(uint8(con.GetValue()))
 		case *constants.ConstantInt16:

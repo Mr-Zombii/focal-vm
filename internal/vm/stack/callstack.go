@@ -1,33 +1,33 @@
 package stack
 
 import (
-	"focal-lang/internal/vm/api"
+	"focal-vm/public/runtimeapi"
 )
 
 type CallStack struct {
 	ptr   int32
-	stack []api.Frame
+	stack []runtimeapi.Frame
 }
 
-func NewCallStack() api.CallStack {
-	return &CallStack{ptr: -1, stack: make([]api.Frame, CALL_STACK_SIZE)}
+func NewCallStack() runtimeapi.CallStack {
+	return &CallStack{ptr: -1, stack: make([]runtimeapi.Frame, CALL_STACK_SIZE)}
 }
 
 func (s *CallStack) GetPointer() int32 {
 	return s.ptr
 }
 
-func (s *CallStack) GetTopFrame() api.Frame {
+func (s *CallStack) GetTopFrame() runtimeapi.Frame {
 	return s.stack[s.ptr]
 }
 
-func (s *CallStack) PushFrame(o api.Frame) int32 {
+func (s *CallStack) PushFrame(o runtimeapi.Frame) int32 {
 	s.ptr++
 	s.stack[s.ptr] = o
 	return s.ptr
 }
 
-func (s *CallStack) PopFrame() api.Frame {
+func (s *CallStack) PopFrame() runtimeapi.Frame {
 	o := s.stack[s.ptr]
 	s.ptr--
 	return o

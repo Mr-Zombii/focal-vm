@@ -4,6 +4,9 @@ type ConstantTag uint8
 
 const (
 	ConstantTagUnknown ConstantTag = iota
+
+	ConstantTagBoolean
+
 	ConstantTagInt8
 	ConstantTagInt16
 	ConstantTagInt32
@@ -21,6 +24,22 @@ const (
 
 type Constant interface {
 	GetTag() ConstantTag
+}
+
+type ConstantBoolean struct {
+	value bool
+}
+
+func NewBooleanConstant(v bool) Constant {
+	return &ConstantBoolean{value: v}
+}
+
+func (c *ConstantBoolean) GetTag() ConstantTag {
+	return ConstantTagInt8
+}
+
+func (c *ConstantBoolean) GetValue() bool {
+	return c.value
 }
 
 type ConstantInt8 struct {

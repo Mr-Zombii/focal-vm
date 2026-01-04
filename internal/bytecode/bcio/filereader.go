@@ -1,8 +1,8 @@
 package bcio
 
 import (
-	"focal-lang/internal/bytecode/constants"
-	"focal-lang/internal/bytecode/spec"
+	"focal-vm/internal/bytecode/constants"
+	"focal-vm/internal/bytecode/spec"
 	"math"
 	"strconv"
 )
@@ -55,6 +55,8 @@ func (br *ModuleReader) readConstantPool() *constants.ConstantPool {
 	for range constantCount {
 		tag := constants.ConstantTag(br.readU8LE())
 		switch tag {
+		case constants.ConstantTagBoolean:
+			pool.GetOrCreateI8(int8(br.readU8LE()))
 		case constants.ConstantTagInt8:
 			pool.GetOrCreateI8(int8(br.readU8LE()))
 		case constants.ConstantTagInt16:

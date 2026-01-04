@@ -2,12 +2,12 @@ package opload
 
 import (
 	"fmt"
-	"focal-lang/internal/bytecode/opcodes"
-	"focal-lang/internal/vm/api"
+	"focal-vm/internal/bytecode/opcodes"
+	"focal-vm/public/runtimeapi"
 )
 
-func InstallOpcodes(vm api.VM) {
-	opcodeMap := make([]api.OpcodeImpl, opcodes.OPCODE_COUNT)
+func InstallOpcodes(vm runtimeapi.VM) {
+	opcodeMap := make([]runtimeapi.OpcodeImpl, opcodes.OPCODE_COUNT)
 	installScope(opcodeMap)
 	installCall(opcodeMap)
 	installStack(opcodeMap)
@@ -17,11 +17,11 @@ func InstallOpcodes(vm api.VM) {
 	vm.InstallOpcodeMap(opcodeMap)
 }
 
-func execPrint(vm api.VM, frame api.Frame) {
+func execPrint(vm runtimeapi.VM, frame runtimeapi.Frame) {
 	value := vm.GetStack().PopValue()
 	fmt.Println(value)
 }
 
-func execRet(vm api.VM, frame api.Frame) {
+func execRet(vm runtimeapi.VM, frame runtimeapi.Frame) {
 	vm.GetCallStack().PopFrame()
 }

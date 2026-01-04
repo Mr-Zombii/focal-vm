@@ -1,19 +1,20 @@
 package opload
 
 import (
-	"focal-lang/internal/bytecode/constants"
-	"focal-lang/internal/bytecode/opcodes"
-	"focal-lang/internal/util"
-	"focal-lang/internal/vm/api"
-	"focal-lang/internal/vm/runtime"
+	"fmt"
+	"focal-vm/internal/bytecode/constants"
+	"focal-vm/internal/bytecode/opcodes"
+	"focal-vm/internal/util"
+	"focal-vm/internal/vm/runtime"
+	"focal-vm/public/runtimeapi"
 )
 
-func installCall(opcodeMap []api.OpcodeImpl) {
+func installCall(opcodeMap []runtimeapi.OpcodeImpl) {
 	opcodeMap[opcodes.OP_CALL] = execCALL
 	opcodeMap[opcodes.OP_FLOAD] = execFLOAD
 }
 
-func execFLOAD(vm api.VM, frame api.Frame) {
+func execFLOAD(vm runtimeapi.VM, frame runtimeapi.Frame) {
 	ptr := frame.GetPtr()
 	code := *frame.GetCode()
 
@@ -46,8 +47,17 @@ func execFLOAD(vm api.VM, frame api.Frame) {
 	//callStack.PushFrame(callFrame)
 }
 
-func execCALL(vm api.VM, frame api.Frame) {
-	fn := vm.GetStack().PopValue().(api.CallableValue)
+func execTCALL(vm runtimeapi.VM, frame runtimeapi.Frame) {
+	fn := vm.GetStack().PopValue().(runtimeapi.CallableValue)
+	if bf, ok := fn.(*runtime.FunctionValue); ok {
+		frame.LoadFn(bf.GetFunction())
+		return
+	}
+	vm.Panic(fmt.Sprintf("Expected Focal Function, not Native or FFI/Plugin function!, module: %s, function: %s", frame.GetModuleName(), frame.GetFunctionName()))
+}
+
+func execCALL(vm runtimeapi.VM, frame runtimeapi.Frame) {
+	fn := vm.GetStack().PopValue().(runtimeapi.CallableValue)
 	fn.Call(vm)
 	//ptr := frame.GetPtr()
 	//code := *frame.GetCode()
