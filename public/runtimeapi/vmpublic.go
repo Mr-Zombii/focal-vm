@@ -11,7 +11,6 @@ type VM interface {
 	GetLoadedModules() map[string]*spec.BCModule
 	GetOpcodeMap() []OpcodeImpl
 	InstallOpcodeMap([]OpcodeImpl)
-	AddModule(*spec.BCModule)
 	LoadModule(string) *spec.BCModule
 	Run(string)
 	GetCallStack() CallStack

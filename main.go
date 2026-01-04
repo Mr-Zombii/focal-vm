@@ -6,6 +6,7 @@ import (
 	"focal-vm/internal/bytecode/opcodes"
 	"focal-vm/internal/bytecode/spec"
 	"os"
+	"path/filepath"
 )
 
 func main() {
@@ -161,8 +162,9 @@ func main() {
 	writer.WriteModule()
 	out := writer.GetBytes()
 
-	os.Remove(bcm.GetName() + ".fbc")
-	f, _ := os.Create(bcm.GetName() + ".fbc")
+	os.Remove(bcm.GetFileName())
+	os.MkdirAll(filepath.Dir(bcm.GetFileName()), os.ModePerm)
+	f, _ := os.Create(bcm.GetFileName())
 	f.Write(out)
 	f.Close()
 
@@ -170,8 +172,9 @@ func main() {
 	writer2.WriteModule()
 	out2 := writer2.GetBytes()
 
-	os.Remove(bcm2.GetName() + ".fbc")
-	f, _ = os.Create(bcm2.GetName() + ".fbc")
+	os.Remove(bcm2.GetFileName())
+	os.MkdirAll(filepath.Dir(bcm2.GetFileName()), os.ModePerm)
+	f, _ = os.Create(bcm2.GetFileName())
 	f.Write(out2)
 	f.Close()
 }

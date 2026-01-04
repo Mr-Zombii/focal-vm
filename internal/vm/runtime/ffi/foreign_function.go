@@ -55,18 +55,26 @@ func CallForeignFunction(vm runtimeapi.VM, rawFn interface{}) {
 		paramIdxStart++
 	}
 
+	var err error
 	for i := paramIdxStart; i < fnParamCount; i++ {
+		paramType := fnParamTypes[i]
 		if vm.GetStack().GetPointer() == -1 && fnType.IsVariadic() {
-			arguments = append(arguments, reflect.Zero(fnParamTypes[i]))
+			arguments = append(arguments, reflect.Zero(paramType))
 			continue
 		}
 		value := vm.GetStack().PopValue()
-		arg, err := RuntimeValueToReflectionValue(value, fnParamTypes[i])
-		arguments = append(arguments, arg)
-		if err != nil {
-			vm.Panic("Error converting stack value to native value!: " + err.Error())
-			return
+		var arg reflect.Value
+		if paramType.String() == "runtimeapi.Value" {
+			arg = reflect.ValueOf(value)
+		} else {
+			arg, err = RuntimeValueToReflectionValue(value, paramType)
+			if err != nil {
+				vm.Panic("Error converting stack value to native value!: " + err.Error())
+				return
+			}
 		}
+		arguments = append(arguments, arg)
+
 	}
 
 	vm.GetCallStack().PushFrame(runtime.NewPseudoFrame(vm.GetCallStack().GetTopFrame(), vm.GetScope(), "{ Native-Function }", goruntime.FuncForPC(fnValue.Pointer()).Name()))

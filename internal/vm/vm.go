@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"fmt"
 	"focal-vm/internal/bytecode/bcio"
 	"focal-vm/internal/bytecode/spec"
 	"focal-vm/internal/vm/runtime"
@@ -66,7 +67,8 @@ func (vm *VM) LoadModule(moduleName string) *spec.BCModule {
 		return mod
 	}
 
-	f, exists := os.OpenFile(moduleName+".fbc", os.O_RDONLY, 0)
+	fmt.Println((strings.ReplaceAll(moduleName, ".", "/")) + ".fbc")
+	f, exists := os.OpenFile((strings.ReplaceAll(moduleName, ".", "/"))+".fbc", os.O_RDONLY, 0)
 	if exists != nil {
 		panic("Could not find module named \"" + moduleName + "\"")
 	}
@@ -76,12 +78,9 @@ func (vm *VM) LoadModule(moduleName string) *spec.BCModule {
 
 	reader := bcio.NewReader(in)
 	module := reader.ReadModule()
-	vm.AddModule(module)
+	module.SetName(moduleName)
+	vm.modMap[moduleName] = module
 	return module
-}
-
-func (vm *VM) AddModule(module *spec.BCModule) {
-	vm.modMap[module.GetName()] = module
 }
 
 func (vm *VM) Run(moduleName string) {

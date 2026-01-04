@@ -10,8 +10,12 @@ import (
 	"strings"
 )
 
-func _builtin_print(v string) {
-	print(v)
+func _builtin_print(stackValue runtimeapi.Value) {
+	if stackValue == nil {
+		print("nil")
+		return
+	}
+	print(stackValue.String())
 }
 
 var bufioReader = bufio.NewReader(os.Stdin)

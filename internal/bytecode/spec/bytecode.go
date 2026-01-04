@@ -1,6 +1,9 @@
 package spec
 
-import "focal-vm/internal/bytecode/constants"
+import (
+	"focal-vm/internal/bytecode/constants"
+	"strings"
+)
 
 var BC_MAGIC = []byte("FOCALS")
 
@@ -36,6 +39,14 @@ func (bcm *BCModule) GetBytecodeMinorVersion() uint8 {
 
 func (bcm *BCModule) GetName() string {
 	return bcm.name
+}
+
+func (bcm *BCModule) GetFileName() string {
+	return strings.ReplaceAll(bcm.name, ".", "/") + ".fbc"
+}
+
+func (bcm *BCModule) SetName(name string) {
+	bcm.name = name
 }
 
 func (bcm *BCModule) GetConstantPool() *constants.ConstantPool {
