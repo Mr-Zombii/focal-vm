@@ -28,7 +28,6 @@ func (mw *ModuleWriter) WriteModule() {
 	mw.writeU32LE(uint32(len(mw.module.GetName())))
 	mw.writeU8ArrLE([]byte(mw.module.GetName()))
 	mw.writeConstantPool(mw.module.GetConstantPool())
-	mw.writeU32LE(uint32(mw.module.GetMainFunctionIndex()))
 	mw.writeU32LE(uint32(len(mw.module.GetFunctions())))
 	for _, v := range mw.module.GetFunctions() {
 		mw.writeFunction(v)

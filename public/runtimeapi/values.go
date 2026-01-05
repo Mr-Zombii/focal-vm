@@ -11,13 +11,9 @@ const (
 	ValueTagInt16
 	ValueTagInt32
 	ValueTagInt64
-	ValueTagInt128 // Unused
 
-	ValueTagFloat8  // Unused
-	ValueTagFloat16 // Unused
 	ValueTagFloat32
 	ValueTagFloat64
-	ValueTagFloat128 // Unused
 
 	ValueTagUTF8String
 

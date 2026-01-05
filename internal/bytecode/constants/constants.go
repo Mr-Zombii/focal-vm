@@ -11,13 +11,9 @@ const (
 	ConstantTagInt16
 	ConstantTagInt32
 	ConstantTagInt64
-	ConstantTagInt128 //unused
 
-	ConstantTagFloat8  //unused
-	ConstantTagFloat16 //unused
 	ConstantTagFloat32
 	ConstantTagFloat64
-	ConstantTagFloat128 // unused
 
 	ConstantTagUTF8String
 )

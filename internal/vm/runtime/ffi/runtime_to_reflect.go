@@ -17,12 +17,12 @@ func RuntimeValueToReflectionValue(v runtimeapi.Value, r reflect.Type) (reflect.
 			return reflect.ValueOf(v.GetRawValue())
 		case reflect.Int:
 			if runtime.ValueIsInteger(v) {
-				return runtime.GetIntegerValue(v)
+				return runtime.GetValueAsInt(v)
 			}
 			return fmt.Errorf("Could not convert value to int, %v", v)
 		case reflect.Uint:
 			if runtime.ValueIsInteger(v) {
-				return uint(runtime.GetIntegerValue(v))
+				return uint(runtime.GetValueAsInt(v))
 			}
 			return fmt.Errorf("Could not convert value to uint, %v", v)
 		case reflect.Int8:

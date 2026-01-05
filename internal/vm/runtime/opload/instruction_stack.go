@@ -5,24 +5,24 @@ import (
 	"focal-vm/public/runtimeapi"
 )
 
-func installStack(opcodeMap []runtimeapi.OpcodeImpl) {
+func install_stack_instructions(opcodeMap []runtimeapi.OpcodeImpl) {
 	opcodeMap[opcodes.OP_DUP] = execDUP
 	opcodeMap[opcodes.OP_SWP] = execSWP
 	opcodeMap[opcodes.OP_POP] = execPOP
 }
 
 func execDUP(vm runtimeapi.VM, frame runtimeapi.Frame) {
-	top := vm.GetStack().GetTopValue()
-	vm.GetStack().PushValue(top)
+	top := vm.GetValueStack().GetTop()
+	vm.GetValueStack().Push(top)
 }
 
 func execSWP(vm runtimeapi.VM, frame runtimeapi.Frame) {
-	first := vm.GetStack().PopValue()
-	last := vm.GetStack().PopValue()
-	vm.GetStack().PushValue(first)
-	vm.GetStack().PushValue(last)
+	first := vm.GetValueStack().Pop()
+	last := vm.GetValueStack().Pop()
+	vm.GetValueStack().Push(first)
+	vm.GetValueStack().Push(last)
 }
 
 func execPOP(vm runtimeapi.VM, frame runtimeapi.Frame) {
-	vm.GetStack().PopValue()
+	vm.GetValueStack().Pop()
 }

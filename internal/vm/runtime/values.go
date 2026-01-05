@@ -14,12 +14,30 @@ type ScopeValue struct {
 	scope runtimeapi.Scope
 }
 
-func NewScopeValue() *ScopeValue {
-	scope := NewScope()
-	value := &ScopeValue{scope: scope}
-	scope.SetLocal("this", value)
-	scope.DefineLocal("this")
-	return value
+func (v *ScopeValue) DefineField(name string) {
+	v.scope.DefineLocal(name)
+}
+
+func (v *ScopeValue) HasField(name string) bool {
+	return v.scope.OwnsLocal(name)
+}
+
+func (v *ScopeValue) SetField(name string, value runtimeapi.Value) error {
+	if !v.scope.OwnsLocal(name) {
+		return fmt.Errorf("Tried to set field on object when field was not defined!")
+	}
+	return v.scope.SetLocal(name, value)
+}
+
+func (v *ScopeValue) GetField(name string) (runtimeapi.Value, error) {
+	if !v.scope.OwnsLocal(name) {
+		return nil, fmt.Errorf("Tried to get field on object when field was not defined!")
+	}
+	return v.scope.GetLocal(name)
+}
+
+func NewScopeValue(scope runtimeapi.Scope) *ScopeValue {
+	return &ScopeValue{scope: scope}
 }
 
 func (v *ScopeValue) GetTag() runtimeapi.ValueTag {
@@ -31,7 +49,7 @@ func (v *ScopeValue) GetScope() runtimeapi.Scope {
 }
 
 func (v *ScopeValue) String() string {
-	return "Native"
+	return "ScopeValue"
 }
 
 func (v *ScopeValue) GetRawValue() interface{} {
@@ -39,15 +57,18 @@ func (v *ScopeValue) GetRawValue() interface{} {
 }
 
 type NativeFunctionValue struct {
-	function func(runtimeapi.VM)
+	name      string
+	function  func(runtimeapi.VM)
+	reflected reflect.Value
 }
 
 func NewNativeFunction(fn func(runtimeapi.VM)) *NativeFunctionValue {
-	return &NativeFunctionValue{function: fn}
+	reflection := reflect.ValueOf(fn)
+	return &NativeFunctionValue{function: fn, reflected: reflection, name: runtime.FuncForPC(reflection.Pointer()).Name()}
 }
 
 func (v *NativeFunctionValue) Call(vm runtimeapi.VM) {
-	vm.GetCallStack().PushFrame(NewPseudoFrame(vm.GetCallStack().GetTopFrame(), vm.GetScope(), "{ Native-Function }", runtime.FuncForPC(reflect.ValueOf(v.function).Pointer()).Name()))
+	vm.GetCallStack().Push(NewPseudoFrame(vm.GetCallStack().GetTop(), vm.GetScope(), "{ Native-Function }", runtime.FuncForPC(reflect.ValueOf(v.function).Pointer()).Name()))
 	v.function(vm)
 }
 
@@ -60,7 +81,15 @@ func (v *NativeFunctionValue) GetFunction() func(runtimeapi.VM) {
 }
 
 func (v *NativeFunctionValue) String() string {
-	return "Native"
+	return "NativeFunction { " + v.name + " }"
+}
+
+func (v *NativeFunctionValue) GetName() string {
+	return v.name
+}
+
+func (v *NativeFunctionValue) GetReflection() reflect.Value {
+	return v.reflected
 }
 
 func (v *NativeFunctionValue) GetRawValue() interface{} {
@@ -81,8 +110,8 @@ func (v *FunctionValue) Call(vm runtimeapi.VM) {
 	if parentScope == nil {
 		parentScope = vm.GetScope()
 	}
-	frame := NewFrame(vm.GetCallStack().GetTopFrame(), parentScope, v.function.GetModule(), v.function)
-	vm.GetCallStack().PushFrame(frame)
+	frame := NewFrame(vm.GetCallStack().GetTop(), parentScope, v.function.GetModule(), v.function)
+	vm.GetCallStack().Push(frame)
 }
 
 func (v *FunctionValue) GetTag() runtimeapi.ValueTag {
@@ -117,6 +146,10 @@ func (v *ArrayValue) GetValue() []runtimeapi.Value {
 	return v.value
 }
 
+func (v *ArrayValue) GetLength() int32 {
+	return int32(len(v.value))
+}
+
 func (v *ArrayValue) String() string {
 	return fmt.Sprintf("%v", v.value)
 }
@@ -124,6 +157,9 @@ func (v *ArrayValue) String() string {
 func (v *ArrayValue) GetRawValue() interface{} {
 	return v.value
 }
+
+var BOOLEAN_VALUE_TRUE = NewBooleanValue(true)
+var BOOLEAN_VALUE_FALSE = NewBooleanValue(false)
 
 type BooleanValue struct {
 	value bool
@@ -319,6 +355,11 @@ func (v *UTF8StringValue) GetRawValue() interface{} {
 
 func ConstantToValue(c constants.Constant) runtimeapi.Value {
 	switch cv := c.(type) {
+	case *constants.ConstantBoolean:
+		if cv.GetValue() {
+			return BOOLEAN_VALUE_TRUE
+		}
+		return BOOLEAN_VALUE_FALSE
 	case *constants.ConstantInt8:
 		return NewInt8Value(cv.GetValue())
 	case *constants.ConstantInt16:
@@ -352,7 +393,18 @@ func ValueIsInteger(v runtimeapi.Value) bool {
 	}
 }
 
-func GetIntegerValue(v runtimeapi.Value) int {
+func ValueIsFloat(v runtimeapi.Value) bool {
+	switch v.GetTag() {
+	case runtimeapi.ValueTagFloat32:
+		return true
+	case runtimeapi.ValueTagFloat64:
+		return true
+	default:
+		return false
+	}
+}
+
+func GetValueAsInt(v runtimeapi.Value) int {
 	switch v.GetTag() {
 	case runtimeapi.ValueTagInt8:
 		return int(v.(*Int8Value).value)
@@ -362,6 +414,26 @@ func GetIntegerValue(v runtimeapi.Value) int {
 		return int(v.(*Int32Value).value)
 	case runtimeapi.ValueTagInt64:
 		return int(v.(*Int64Value).value)
+	default:
+		return -1
+	}
+}
+
+func GetValueAsFloat64(v runtimeapi.Value) float64 {
+	switch v.GetTag() {
+	case runtimeapi.ValueTagFloat32:
+		return float64(v.(*Float32Value).value)
+	case runtimeapi.ValueTagFloat64:
+		return float64(v.(*Float64Value).value)
+	default:
+		return -1
+	}
+}
+
+func GetValueAsFloat32(v runtimeapi.Value) float32 {
+	switch v.GetTag() {
+	case runtimeapi.ValueTagFloat32:
+		return float32(v.(*Float32Value).value)
 	default:
 		return -1
 	}

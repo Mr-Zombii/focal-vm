@@ -51,7 +51,7 @@ func ReadU64ArrLE(arr []byte, idx int32, size int32) []uint64 {
 	return out
 }
 
-func ReadVariableLE32(arr []byte, idx int32, size int32) uint32 {
+func ReadVariableLEU32(arr []byte, idx int32, size int32) uint32 {
 	v := uint32(0)
 	for i := range size {
 		v <<= 8
@@ -60,7 +60,7 @@ func ReadVariableLE32(arr []byte, idx int32, size int32) uint32 {
 	return v
 }
 
-func ReadVariableLE64(arr []byte, idx int32, size int32) uint64 {
+func ReadVariableLEU64(arr []byte, idx int32, size int32) uint64 {
 	v := uint64(0)
 	for i := range size {
 		v <<= 8
@@ -110,7 +110,7 @@ func WriteU64ArrLE(arr []byte, v []uint64) []byte {
 	return arr
 }
 
-func WriteVaribleLE32(arr []byte, v uint32, size int32) []byte {
+func WriteVariableLEU32(arr []byte, v uint32, size int32) []byte {
 	bytes := arr
 	o := v
 	for range size {
@@ -120,7 +120,7 @@ func WriteVaribleLE32(arr []byte, v uint32, size int32) []byte {
 	return bytes
 }
 
-func WriteVaribleLE64(arr []byte, v uint64, size int32) []byte {
+func WriteVariableLEU64(arr []byte, v uint64, size int32) []byte {
 	bytes := arr
 	o := v
 	for range size {

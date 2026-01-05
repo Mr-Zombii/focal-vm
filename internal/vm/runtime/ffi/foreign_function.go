@@ -8,11 +8,14 @@ import (
 )
 
 type ForeignFunctionValue struct {
-	function interface{}
+	function  interface{}
+	reflected reflect.Value
+	name      string
 }
 
 func NewForeignFunction(fn interface{}) *ForeignFunctionValue {
-	return &ForeignFunctionValue{function: fn}
+	reflection := reflect.ValueOf(fn)
+	return &ForeignFunctionValue{function: fn, reflected: reflection, name: goruntime.FuncForPC(reflection.Pointer()).Name()}
 }
 
 func (v *ForeignFunctionValue) Call(vm runtimeapi.VM) {
@@ -28,7 +31,15 @@ func (v *ForeignFunctionValue) GetFunction() interface{} {
 }
 
 func (v *ForeignFunctionValue) String() string {
-	return "Foreign"
+	return "ForeignFunction{ " + v.name + " }"
+}
+
+func (v *ForeignFunctionValue) GetName() string {
+	return v.name
+}
+
+func (v *ForeignFunctionValue) GetReflection() reflect.Value {
+	return v.reflected
 }
 
 func (v *ForeignFunctionValue) GetRawValue() interface{} {
@@ -47,6 +58,13 @@ func CallForeignFunction(vm runtimeapi.VM, rawFn interface{}) {
 	for i := range fnParamCount {
 		fnParamTypes[i] = fnType.In(i)
 	}
+
+	fnReturnCount := fnType.NumOut()
+	fnReturnTypes := make([]reflect.Type, fnReturnCount)
+	for i := range fnReturnCount {
+		fnReturnTypes[i] = fnType.Out(i)
+	}
+
 	var arguments []reflect.Value
 
 	paramIdxStart := 0
@@ -58,11 +76,11 @@ func CallForeignFunction(vm runtimeapi.VM, rawFn interface{}) {
 	var err error
 	for i := paramIdxStart; i < fnParamCount; i++ {
 		paramType := fnParamTypes[i]
-		if vm.GetStack().GetPointer() == -1 && fnType.IsVariadic() {
+		if vm.GetValueStack().GetPointer() == -1 && fnType.IsVariadic() {
 			arguments = append(arguments, reflect.Zero(paramType))
 			continue
 		}
-		value := vm.GetStack().PopValue()
+		value := vm.GetValueStack().Pop()
 		var arg reflect.Value
 		if paramType.String() == "runtimeapi.Value" {
 			arg = reflect.ValueOf(value)
@@ -77,7 +95,7 @@ func CallForeignFunction(vm runtimeapi.VM, rawFn interface{}) {
 
 	}
 
-	vm.GetCallStack().PushFrame(runtime.NewPseudoFrame(vm.GetCallStack().GetTopFrame(), vm.GetScope(), "{ Native-Function }", goruntime.FuncForPC(fnValue.Pointer()).Name()))
+	vm.GetCallStack().Push(runtime.NewPseudoFrame(vm.GetCallStack().GetTop(), vm.GetScope(), "{ Native-Function }", goruntime.FuncForPC(fnValue.Pointer()).Name()))
 
 	var returnValues []reflect.Value
 	if fnType.IsVariadic() {
@@ -87,10 +105,19 @@ func CallForeignFunction(vm runtimeapi.VM, rawFn interface{}) {
 	}
 	for i := range returnValues {
 		returnValue := returnValues[i]
-		runtimeValue, err := ReflectionValueToRuntimeValue(returnValue)
-		if err != nil {
-			vm.Panic("Error converting native value to stack value!: " + err.Error())
+		returnType := fnReturnTypes[i]
+
+		var runtimeValue runtimeapi.Value
+		if returnType.String() == "runtimeapi.Value" {
+			runtimeValue = returnValue.Interface().(runtimeapi.Value)
+		} else {
+			runtimeValue, err = ReflectionValueToRuntimeValue(returnValue)
+			if err != nil {
+				vm.Panic("Error converting native value to stack value!: " + err.Error())
+				return
+			}
 		}
-		vm.GetStack().PushValue(runtimeValue)
+
+		vm.GetValueStack().Push(runtimeValue)
 	}
 }

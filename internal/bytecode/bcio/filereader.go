@@ -31,12 +31,10 @@ func (br *ModuleReader) ReadModule() *spec.BCModule {
 	name := br.readU8ArrLE(int32(nameLength))
 
 	pool := br.readConstantPool()
-	mainFunctionIndex := br.readU32LE()
 
 	module := spec.NewBCModule(
 		versionMajor, versionMinor,
-		string(name), int32(mainFunctionIndex),
-		pool,
+		string(name), pool,
 	)
 
 	funcCount := br.readU32LE()

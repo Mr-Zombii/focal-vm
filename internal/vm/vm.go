@@ -1,52 +1,55 @@
 package vm
 
 import (
-	"fmt"
-	"focal-vm/internal/bytecode/bcio"
 	"focal-vm/internal/bytecode/spec"
+	"focal-vm/internal/util"
 	"focal-vm/internal/vm/runtime"
 	"focal-vm/internal/vm/runtime/builtins"
 	"focal-vm/internal/vm/runtime/opload"
-	"focal-vm/internal/vm/stack"
 	"focal-vm/public/runtimeapi"
-	"io"
 	"os"
 	"plugin"
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/mitchellh/go-wordwrap"
 )
 
 type VM struct {
-	stack        runtimeapi.Stack
-	callStack    runtimeapi.CallStack
-	modMap       map[string]*spec.BCModule
-	opcodeMap    []runtimeapi.OpcodeImpl
-	currentFrame runtimeapi.Frame
-	scope        runtimeapi.Scope
-	plugins      map[string]*plugin.Plugin
+	stack            *util.Stack[runtimeapi.Value]
+	callStack        *util.Stack[runtimeapi.Frame]
+	modMap           map[string]*spec.BCModule
+	opcodeMap        []runtimeapi.OpcodeImpl
+	currentFrame     runtimeapi.Frame
+	scope            runtimeapi.Scope
+	plugins          map[string]*plugin.Plugin
+	moduleCollection runtimeapi.ModuleCollection
+	haltCallback     func()
 }
 
 func NewVM() runtimeapi.VM {
 	vm := &VM{
-		stack:     stack.NewStack(),
-		callStack: stack.NewCallStack(),
-		modMap:    map[string]*spec.BCModule{},
-		scope:     runtime.NewScope(),
-		plugins:   map[string]*plugin.Plugin{},
+		stack:            util.NewStack[runtimeapi.Value](256),
+		callStack:        util.NewStack[runtimeapi.Frame](256),
+		modMap:           map[string]*spec.BCModule{},
+		scope:            runtime.NewScope(),
+		plugins:          map[string]*plugin.Plugin{},
+		moduleCollection: NewModuleCollection(),
+		haltCallback:     func() {},
 	}
 
 	opload.InstallOpcodes(vm)
-	builtins.Register(vm)
+	builtins.Register(vm.scope)
 
 	return vm
 }
 
-func (vm *VM) GetStack() runtimeapi.Stack {
+func (vm *VM) GetValueStack() *util.Stack[runtimeapi.Value] {
 	return vm.stack
 }
 
-func (vm *VM) GetCallStack() runtimeapi.CallStack {
+func (vm *VM) GetCallStack() *util.Stack[runtimeapi.Frame] {
 	return vm.callStack
 }
 
@@ -66,19 +69,11 @@ func (vm *VM) LoadModule(moduleName string) *spec.BCModule {
 	if mod, ok := vm.modMap[moduleName]; ok {
 		return mod
 	}
-
-	fmt.Println((strings.ReplaceAll(moduleName, ".", "/")) + ".fbc")
-	f, exists := os.OpenFile((strings.ReplaceAll(moduleName, ".", "/"))+".fbc", os.O_RDONLY, 0)
-	if exists != nil {
+	module, err := vm.moduleCollection.SearchForModule(moduleName)
+	if err != nil {
 		panic("Could not find module named \"" + moduleName + "\"")
 	}
 
-	in, _ := io.ReadAll(f)
-	f.Close()
-
-	reader := bcio.NewReader(in)
-	module := reader.ReadModule()
-	module.SetName(moduleName)
 	vm.modMap[moduleName] = module
 	return module
 }
@@ -93,10 +88,10 @@ func (vm *VM) Run(moduleName string) {
 		panic("Function main does not exist in module \"" + moduleName + "\"!")
 	}
 	frame := runtime.NewFrame(nil, vm.scope, mod, fun)
-	vm.callStack.PushFrame(frame)
+	vm.callStack.Push(frame)
 
 	for vm.callStack.GetPointer() != -1 {
-		vm.currentFrame = vm.callStack.GetTopFrame()
+		vm.currentFrame = vm.callStack.GetTop()
 
 		ptr := vm.currentFrame.GetPtr()
 		code := *vm.currentFrame.GetCode()
@@ -107,18 +102,19 @@ func (vm *VM) Run(moduleName string) {
 		opcodeImpl(vm, vm.currentFrame)
 	}
 
+	vm.Halt(0)
 }
 
 func (vm *VM) GetScope() runtimeapi.Scope {
 	return vm.scope
 }
 
-func (vm *VM) ClearStacks() {
-	for vm.GetStack().GetPointer() != -1 {
-		vm.GetStack().PopValue()
+func (vm *VM) ResetStackPointers() {
+	for vm.GetValueStack().GetPointer() != -1 {
+		vm.GetValueStack().Pop()
 	}
 	for vm.GetCallStack().GetPointer() != -1 {
-		vm.GetCallStack().PopFrame()
+		vm.GetCallStack().Pop()
 	}
 }
 
@@ -137,15 +133,7 @@ func printToBuf(strings ...string) {
 	errorOut += out
 }
 
-func flushBuffer() {
-	_, err := os.Stdout.Write([]byte(errorOut))
-	if err != nil {
-		panic(err)
-	}
-	errorOut = ""
-}
-
-func (vm *VM) PrintBox(title string, contents string, boxChars string, partialOffset int32) int32 {
+func (vm *VM) printBox(title string, contents string, boxChars string) (string, int32) {
 	boxRunes := []rune(boxChars)
 	cornerTL := string(boxRunes[0])
 	cornerTR := string(boxRunes[1])
@@ -167,23 +155,12 @@ func (vm *VM) PrintBox(title string, contents string, boxChars string, partialOf
 	leftLen := (longestLine) / 2
 	rightLen := longestLine - leftLen
 
-	offs := (int(partialOffset) / 2) - leftLen
-	offStr := ""
-	for range offs {
-		offStr += " "
-	}
-
 	for _, line := range lines {
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
 		lineOut := line
 		pad := (longestLine - 2) - utf8.RuneCountInString(line)
 
-		for range pad {
-			lineOut += " "
-		}
-		contentsBuffer += offStr + vbar + " " + lineOut + " " + vbar + "\n"
+		lineOut += strings.Repeat(" ", pad)
+		contentsBuffer += vbar + " " + lineOut + " " + vbar + "\n"
 	}
 	boxBuffer := ""
 
@@ -198,13 +175,13 @@ func (vm *VM) PrintBox(title string, contents string, boxChars string, partialOf
 		leftLen -= titleLenL
 	}
 
-	blankLine := offStr + vbar
+	blankLine := vbar
 	for range longestLine {
 		blankLine += " "
 	}
 	blankLine += vbar + "\n"
 
-	boxBuffer += offStr + cornerTL
+	boxBuffer += cornerTL
 	for range leftLen {
 		boxBuffer += hbar
 	}
@@ -218,26 +195,25 @@ func (vm *VM) PrintBox(title string, contents string, boxChars string, partialOf
 	boxBuffer += contentsBuffer
 	boxBuffer += blankLine
 
-	boxBuffer += offStr + cornerBL
+	boxBuffer += cornerBL
 	for range longestLine {
 		boxBuffer += hbar
 	}
 	boxBuffer += cornerBR + "\n"
 
-	print(boxBuffer)
-	return int32(longestLine)
+	return boxBuffer, int32(longestLine)
 }
 
 func (vm *VM) Panic(message string) {
 	var stackFrames []runtimeapi.Frame
 	for vm.callStack.GetPointer() != -1 {
-		frame := vm.callStack.PopFrame()
+		frame := vm.callStack.Pop()
 		stackFrames = append(stackFrames, frame)
 	}
 
 	var stackValues []runtimeapi.Value
 	for vm.stack.GetPointer() != -1 {
-		value := vm.stack.PopValue()
+		value := vm.stack.Pop()
 		stackValues = append(stackValues, value)
 	}
 
@@ -269,23 +245,53 @@ func (vm *VM) Panic(message string) {
 			printToBuf("└")
 		}
 
-		printToBuf("─> { Idx: #"+strconv.Itoa(i)+" Value: ", value.String(), " }\n")
+		printToBuf("─> { Idx: #"+strconv.Itoa(i)+" Value: ", strconv.Quote(value.String()), " }\n")
 	}
 	if len(stackValues) == 0 {
 		printlnToBuf("└──(Empty Stack)")
 	}
 
-	width := vm.PrintBox("[ Panic Dump ]", errorOut, "╔╗╚╝═║", 0)
-	vm.PrintBox("[ Panic Message ]", message, "╭╮╰╯─│", width)
+	box1, width1 := vm.printBox("[ Panic Dump ]", errorOut, "╔╗╚╝═║")
+	box2, width2 := vm.printBox("[ Panic Message ]", wordwrap.WrapString(message, 125), "╭╮╰╯─│")
 
-	vm.ClearStacks()
+	if width1 > width2 {
+		box2 = vm.indentStr(vm.getCenter(width2, width1), box2)
+	} else if width2 > width1 {
+		box1 = vm.indentStr(vm.getCenter(width1, width2), box1)
+	}
 
-	os.Exit(-1)
+	print(box1)
+	print(box2)
+
+	vm.Halt(-1)
 }
 
-func (vm *VM) Halt() {
-	vm.ClearStacks()
-	os.Exit(0)
+func (vm *VM) getCenter(width1 int32, width2 int32) int32 {
+	leftLen := (width1) / 2
+	offs := (width2 / 2) - leftLen
+	return offs
+}
+
+func (vm *VM) indentStr(identWidth int32, v string) string {
+	strBuffer := ""
+	lines := strings.Split(v, "\n")
+	lineCount := len(lines)
+	for i, line := range lines {
+		if strings.TrimRight(line, " ") == "" {
+			continue
+		}
+		strBuffer += strings.Repeat(" ", int(identWidth)) + line
+		if i != lineCount-1 {
+			strBuffer += "\n"
+		}
+	}
+	return strBuffer
+}
+
+func (vm *VM) Halt(exitCode int32) {
+	vm.ResetStackPointers()
+	vm.haltCallback()
+	os.Exit(int(exitCode))
 }
 
 func (vm *VM) LoadPlugin(pluginName string) *plugin.Plugin {
@@ -303,4 +309,12 @@ func (vm *VM) LoadPlugin(pluginName string) *plugin.Plugin {
 
 func (vm *VM) GetLoadedPlugins() map[string]*plugin.Plugin {
 	return vm.plugins
+}
+
+func (vm *VM) SetStopCallback(f func()) {
+	vm.haltCallback = f
+}
+
+func (vm *VM) GetModuleCollection() runtimeapi.ModuleCollection {
+	return vm.moduleCollection
 }

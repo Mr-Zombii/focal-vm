@@ -1,22 +1,19 @@
 package runtime
 
 import (
+	"fmt"
+	"focal-vm/internal/util"
 	"focal-vm/public/runtimeapi"
 )
 
 type Scope struct {
-	parent runtimeapi.Scope
-	locals map[string]runtimeapi.Value
-}
-
-func (s *Scope) Reset() {
-	for key := range s.locals {
-		delete(s.locals, key)
-	}
+	parent        runtimeapi.Scope
+	definedLocals map[string]bool
+	locals        map[string]runtimeapi.Value
 }
 
 func NewScope() runtimeapi.Scope {
-	return &Scope{locals: map[string]runtimeapi.Value{}}
+	return &Scope{definedLocals: map[string]bool{}, locals: map[string]runtimeapi.Value{}}
 }
 
 func (s *Scope) NewChildScope() runtimeapi.Scope {
@@ -29,40 +26,85 @@ func (s *Scope) GetParent() runtimeapi.Scope {
 	return s.parent
 }
 
+func (s *Scope) DefineAndSet(n string, v runtimeapi.Value) {
+	s.DefineLocal(n)
+	s.SetLocal(n, v)
+}
+
 func (s *Scope) DefineLocal(n string) {
+	s.definedLocals[n] = false
 	s.locals[n] = nil
 }
 
-func (s *Scope) HasLocal(n string) bool {
-	_, ok := s.locals[n]
-	if !ok && s.parent != nil {
-		return s.parent.HasLocal(n)
+func (s *Scope) HasLocal(name string) bool {
+	scopeStack := util.NewStack[runtimeapi.Scope](256)
+	scopeStack.Push(s)
+
+	for scopeStack.GetPointer() != -1 {
+		scope := scopeStack.Pop().(*Scope)
+		if _, ok := scope.definedLocals[name]; ok {
+			return true
+		}
+		if scope.parent != nil {
+			scopeStack.Push(scope.GetParent())
+		}
 	}
+
+	return false
+}
+
+func (s *Scope) OwnsLocal(name string) bool {
+	_, ok := s.definedLocals[name]
 	return ok
 }
 
-func (s *Scope) GetLocal(n string) runtimeapi.Value {
-	v, ok := s.locals[n]
-	if !ok && s.GetParent() != nil {
-		return s.GetParent().GetLocal(n)
+func (s *Scope) GetLocal(name string) (runtimeapi.Value, error) {
+	scopeStack := util.NewStack[runtimeapi.Scope](256)
+	scopeStack.Push(s)
+
+	for scopeStack.GetPointer() != -1 {
+		scope := scopeStack.Pop().(*Scope)
+		if _, ok := scope.definedLocals[name]; ok {
+			return scope.locals[name], nil
+		}
+		if scope.parent != nil {
+			scopeStack.Push(scope.GetParent())
+		}
 	}
-	return v
+
+	return nil, fmt.Errorf("Cannot get local '%v' as is not defined in parent nor local scope", name)
 }
 
-func (s *Scope) setLocalInternal(n string, v runtimeapi.Value) {
-	_, ok := s.locals[n]
-	if !ok && s.parent != nil {
-		s.GetParent().(*Scope).setLocalInternal(n, v)
-		return
+func (s *Scope) SetLocal(name string, v runtimeapi.Value) error {
+	scopeStack := util.NewStack[runtimeapi.Scope](256)
+	scopeStack.Push(s)
+
+	for scopeStack.GetPointer() != -1 {
+		scope := scopeStack.Pop().(*Scope)
+		if _, ok := scope.definedLocals[name]; ok {
+			scope.locals[name] = v
+		}
+		if scope.parent != nil {
+			scopeStack.Push(scope.GetParent())
+		}
 	}
-	s.locals[n] = v
+
+	return fmt.Errorf("Cannot set local '%v' as is not defined in parent nor local scope", name)
 }
 
-func (s *Scope) SetLocal(n string, v runtimeapi.Value) {
-	if s.HasLocal(n) {
-		s.setLocalInternal(n, v)
-		return
+func (s *Scope) Reset() {
+	for key := range s.locals {
+		delete(s.locals, key)
 	}
+	for key := range s.definedLocals {
+		delete(s.definedLocals, key)
+	}
+}
 
-	s.locals[n] = v
+func (s *Scope) Visit(visitor func(string, runtimeapi.Value)) {
+	for k, value := range s.locals {
+		if value != nil {
+			visitor(k, value)
+		}
+	}
 }

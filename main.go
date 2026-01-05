@@ -1,12 +1,12 @@
 package main
 
 import (
+	"archive/zip"
 	"focal-vm/internal/bytecode/bcio"
 	"focal-vm/internal/bytecode/constants"
 	"focal-vm/internal/bytecode/opcodes"
 	"focal-vm/internal/bytecode/spec"
 	"os"
-	"path/filepath"
 )
 
 func main() {
@@ -53,7 +53,7 @@ func main() {
 			OP_CLOAD1 4 // 0
 			OP_EQ
 
-			OP_BR
+			OP_BRANCH
 				OP_CLOAD1 4 // 0
 				OP_RET
 
@@ -91,65 +91,82 @@ func main() {
 		}
 	*/
 
-	bcm2 := spec.NewBCModule(1, 0, "test", 0, constants.NewConstantPool())
+	/*
+		module test {
+			func loadMe() {
+				env["_builtin_print"]("Hi from \"test\" module")
+				value := env["_builtin_read_line"]()
+				env["_builtin_print"](env[value])
+				env["_builtin_print"]("\n")
+				return
+			}
+		}
 
-	bcm2.SetFunctions([]*spec.BCFunction{spec.NewBCFunction(bcm2, bcm2.GetConstantPool().GetOrCreateUTF8("loadMe"), spec.BCFunctionModPub, []uint8{
-		uint8(opcodes.OP_CLOAD),
+		module boostrap {
+
+			func main() {
+				env["_builtin_print"]("Hi from \"bootstrap\" module")
+				env["_builtin_print"]("\n")
+				loadMe()
+
+				return
+			}
+		}
+	*/
+
+	bcm2 := spec.NewBCModule(1, 0, "test", constants.NewConstantPool())
+
+	bcm2.SetFunctions([]*spec.BCFunction{spec.NewBCFunction(bcm2, bcm2.GetConstantPool().GetOrCreateUTF8("loadMe"), 0, []uint8{
+		uint8(opcodes.OP_LOAD_CONST),
 		uint8(0),
 		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("Hi from \"test\" module!\n")),
 
-		uint8(opcodes.OP_VLOAD),
+		uint8(opcodes.OP_LOAD_CONST),
 		uint8(0),
 		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("_builtin_print")),
+		uint8(opcodes.OP_GET_LOCAL),
 		uint8(opcodes.OP_CALL),
 
-		uint8(opcodes.OP_VLOAD),
+		uint8(opcodes.OP_LOAD_CONST),
 		uint8(0),
 		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("_builtin_read_line")),
+		uint8(opcodes.OP_GET_LOCAL),
 		uint8(opcodes.OP_CALL),
 
-		uint8(opcodes.OP_VLOAD),
+		uint8(opcodes.OP_LOAD_CONST),
 		uint8(0),
 		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("_builtin_print")),
+		uint8(opcodes.OP_GET_LOCAL),
 		uint8(opcodes.OP_CALL),
 
-		uint8(opcodes.OP_CLOAD),
+		uint8(opcodes.OP_LOAD_CONST),
 		uint8(0),
 		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("\n")),
 
-		uint8(opcodes.OP_VLOAD),
+		uint8(opcodes.OP_LOAD_CONST),
 		uint8(0),
 		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("_builtin_print")),
+		uint8(opcodes.OP_GET_LOCAL),
 		uint8(opcodes.OP_CALL),
 
 		uint8(opcodes.OP_RET),
 	})})
 
-	bcm := spec.NewBCModule(1, 0, "bootstrap", 0, constants.NewConstantPool())
+	bcm := spec.NewBCModule(1, 0, "testing.bootstrap", constants.NewConstantPool())
 	testIdx := uint32(bcm.GetConstantPool().GetOrCreateUTF8("test"))
 	loadMeIdx := uint32(bcm.GetConstantPool().GetOrCreateUTF8("loadMe"))
-	bcm.SetFunctions([]*spec.BCFunction{spec.NewBCFunction(bcm, bcm.GetConstantPool().GetOrCreateUTF8("main"), spec.BCFunctionModPub, []uint8{
-		//uint8(opcodes.OP_CLOAD),
-		//uint8(0),
-		//uint8(bcm.GetConstantPool().GetOrCreateUTF8("RegisterLunnoNativeFunctions")),
-		//uint8(opcodes.OP_CLOAD),
-		//uint8(0),
-		//uint8(bcm.GetConstantPool().GetOrCreateUTF8("./testplugin/testplugin.so")),
-		//uint8(opcodes.OP_VLOAD),
-		//uint8(0),
-		//uint8(bcm.GetConstantPool().GetOrCreateUTF8("loadPlugin")),
-		//uint8(opcodes.OP_CALL),
-
-		uint8(opcodes.OP_CLOAD),
+	bcm.SetFunctions([]*spec.BCFunction{spec.NewBCFunction(bcm, bcm.GetConstantPool().GetOrCreateUTF8("main"), 0, []uint8{
+		uint8(opcodes.OP_LOAD_CONST),
 		uint8(0),
-		uint8(bcm.GetConstantPool().GetOrCreateUTF8("Hi from \"boostrap\" module!\n")),
+		uint8(bcm.GetConstantPool().GetOrCreateUTF8("Hi from \"" + bcm.GetName() + "\" module!\n")),
 
-		uint8(opcodes.OP_VLOAD),
+		uint8(opcodes.OP_LOAD_CONST),
 		uint8(0),
 		uint8(bcm.GetConstantPool().GetOrCreateUTF8("_builtin_print")),
+		uint8(opcodes.OP_GET_LOCAL),
 		uint8(opcodes.OP_CALL),
 
-		uint8(opcodes.OP_FLOAD),
+		uint8(opcodes.OP_LOAD_STATIC_FUNCTION),
 		uint8(0),
 		uint8(testIdx),
 		uint8(loadMeIdx),
@@ -158,23 +175,27 @@ func main() {
 		uint8(opcodes.OP_RET),
 	})})
 
+	os.Remove("focal-archive.zip")
+	archive, _ := os.Create("focal-archive.zip")
+	focalArchive := zip.NewWriter(archive)
+
 	writer := bcio.NewWriter(bcm)
 	writer.WriteModule()
 	out := writer.GetBytes()
 
-	os.Remove(bcm.GetFileName())
-	os.MkdirAll(filepath.Dir(bcm.GetFileName()), os.ModePerm)
-	f, _ := os.Create(bcm.GetFileName())
+	f, _ := focalArchive.Create(bcm.GetFileName())
 	f.Write(out)
-	f.Close()
 
 	writer2 := bcio.NewWriter(bcm2)
 	writer2.WriteModule()
 	out2 := writer2.GetBytes()
 
-	os.Remove(bcm2.GetFileName())
-	os.MkdirAll(filepath.Dir(bcm2.GetFileName()), os.ModePerm)
-	f, _ = os.Create(bcm2.GetFileName())
+	f, _ = focalArchive.Create(bcm2.GetFileName())
 	f.Write(out2)
-	f.Close()
+
+	f, _ = focalArchive.Create("focal-manifest.json")
+	f.Write([]byte("{ \"main-module\": \"" + bcm.GetName() + "\" }"))
+
+	focalArchive.Close()
+	archive.Close()
 }

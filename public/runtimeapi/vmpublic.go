@@ -2,6 +2,7 @@ package runtimeapi
 
 import (
 	"focal-vm/internal/bytecode/spec"
+	"focal-vm/internal/util"
 	"plugin"
 )
 
@@ -13,11 +14,13 @@ type VM interface {
 	InstallOpcodeMap([]OpcodeImpl)
 	LoadModule(string) *spec.BCModule
 	Run(string)
-	GetCallStack() CallStack
-	GetStack() Stack
+	GetCallStack() *util.Stack[Frame]
+	GetValueStack() *util.Stack[Value]
 	GetScope() Scope
 	GetLoadedPlugins() map[string]*plugin.Plugin
 	LoadPlugin(string) *plugin.Plugin
 	Panic(string)
-	Halt()
+	Halt(int32)
+	SetStopCallback(f func())
+	GetModuleCollection() ModuleCollection
 }

@@ -12,20 +12,18 @@ type BCModule struct {
 	major uint8
 	minor uint8
 
-	name              string
-	cpool             *constants.ConstantPool
-	mainFunctionIndex int32
-	funcs             []*BCFunction
+	name  string
+	cpool *constants.ConstantPool
+	funcs []*BCFunction
 }
 
-func NewBCModule(major uint8, minor uint8, name string, mainFunctionIndex int32, pool *constants.ConstantPool) *BCModule {
+func NewBCModule(major uint8, minor uint8, name string, pool *constants.ConstantPool) *BCModule {
 	return &BCModule{
-		major:             major,
-		minor:             minor,
-		name:              name,
-		cpool:             pool,
-		mainFunctionIndex: mainFunctionIndex,
-		funcs:             []*BCFunction{},
+		major: major,
+		minor: minor,
+		name:  name,
+		cpool: pool,
+		funcs: []*BCFunction{},
 	}
 }
 
@@ -53,10 +51,6 @@ func (bcm *BCModule) GetConstantPool() *constants.ConstantPool {
 	return bcm.cpool
 }
 
-func (bcm *BCModule) GetMainFunctionIndex() int32 {
-	return bcm.mainFunctionIndex
-}
-
 func (bcm *BCModule) GetFunctions() []*BCFunction {
 	return bcm.funcs
 }
@@ -80,8 +74,8 @@ func (bcm *BCModule) GetFunction(s string) *BCFunction {
 }
 
 const (
-	BCFunctionModPub uint8 = 0b01
-	BCFunctionModFFI uint8 = 0b10
+	BCFunctionModPrivate uint8 = 0b01
+	BCFunctionModSubFunc uint8 = 0b10
 )
 
 type BCFunction struct {
