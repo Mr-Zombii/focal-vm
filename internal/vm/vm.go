@@ -1,9 +1,16 @@
 package vm
 
 import (
+	"fmt"
+	"focal-vm/internal/bytecode/bctypes"
+	"focal-vm/internal/bytecode/constants"
 	"focal-vm/internal/bytecode/spec"
+	"focal-vm/internal/erroring"
 	"focal-vm/internal/util"
+	"focal-vm/internal/vm/gc"
+	"focal-vm/internal/vm/rtvalue"
 	"focal-vm/internal/vm/runtime"
+	"focal-vm/internal/vm/runtime/allocator"
 	"focal-vm/internal/vm/runtime/builtins"
 	"focal-vm/internal/vm/runtime/opload"
 	"focal-vm/public/runtimeapi"
@@ -17,7 +24,7 @@ import (
 )
 
 type VM struct {
-	stack            *util.Stack[runtimeapi.Value]
+	stack            *util.Stack[rtvalue.RTValue]
 	callStack        *util.Stack[runtimeapi.Frame]
 	modMap           map[string]*spec.BCModule
 	opcodeMap        []runtimeapi.OpcodeImpl
@@ -25,17 +32,23 @@ type VM struct {
 	scope            runtimeapi.Scope
 	plugins          map[string]*plugin.Plugin
 	moduleCollection runtimeapi.ModuleCollection
+	garbageCollector *gc.GarbageCollector
+	allocator        allocator.Allocator
 	haltCallback     func()
 }
 
 func NewVM() runtimeapi.VM {
+	heap := allocator.NewAllocator(0)
+
 	vm := &VM{
-		stack:            util.NewStack[runtimeapi.Value](256),
+		stack:            util.NewStack[rtvalue.RTValue](256),
 		callStack:        util.NewStack[runtimeapi.Frame](256),
 		modMap:           map[string]*spec.BCModule{},
 		scope:            runtime.NewScope(),
 		plugins:          map[string]*plugin.Plugin{},
 		moduleCollection: NewModuleCollection(),
+		garbageCollector: gc.NewGarbageCollector(heap),
+		allocator:        heap,
 		haltCallback:     func() {},
 	}
 
@@ -45,7 +58,7 @@ func NewVM() runtimeapi.VM {
 	return vm
 }
 
-func (vm *VM) GetValueStack() *util.Stack[runtimeapi.Value] {
+func (vm *VM) GetValueStack() *util.Stack[rtvalue.RTValue] {
 	return vm.stack
 }
 
@@ -78,16 +91,71 @@ func (vm *VM) LoadModule(moduleName string) *spec.BCModule {
 	return module
 }
 
+func (vm *VM) GetRTValuePool() *rtvalue.RTValuePool {
+	return vm.garbageCollector.GetMainPool()
+}
+
+type _VmErrorHandler struct {
+	vm *VM
+}
+
+func (e *_VmErrorHandler) Panic(title string, args ...interface{}) {
+	argStr := fmt.Sprint(args...)
+	outStr := ""
+
+	a := strings.Split(argStr, "\n")
+	aLen := len(a) - 1
+
+	for i, v := range a {
+		outStr += "    " + v
+		if i < aLen {
+			outStr += "\n"
+		}
+	}
+
+	e.vm.Panic(title + ":\n" + outStr)
+}
+
 func (vm *VM) Run(moduleName string) {
+	//defer func() { // Error Handler
+	//	if v := recover(); v != nil {
+	//		vm.Panic(fmt.Sprint(v))
+	//		return
+	//	}
+	//}()
+	erroring.GlobalErrorHandler = &_VmErrorHandler{
+		vm: vm,
+	}
 	mod, ok := vm.modMap[moduleName]
 	if !ok {
 		panic("Tried to load main function from non-existent module \"" + moduleName + "\"!")
 	}
-	fun := mod.GetFunction("main")
-	if fun == nil {
-		panic("Function main does not exist in module \"" + moduleName + "\"!")
+	tpool := mod.GetTypePool()
+	cpool := mod.GetConstantPool()
+	mainFnSignature := "function[array[string]][]"
+	mainFnType, err := tpool.GetTypeFromSignature(mainFnSignature)
+	if err != nil {
+		vm.Panic(fmt.Sprintf("module '%s' could not find a function with the signature '%s', please make a function named 'main' with the signature '%s' or launch a different module!", moduleName, mainFnSignature, mainFnSignature))
+	}
+	fun, err := mod.GetFunction("main", mainFnType.(*bctypes.FunctionType))
+	if err != nil {
+		vm.Panic(err.Error())
+		return
 	}
 	frame := runtime.NewFrame(nil, vm.scope, mod, fun)
+	args := os.Args[3:len(os.Args)]
+	rtV, _ := tpool.GetOrCreateUTFStringType()
+	rtpool := vm.GetRTValuePool()
+
+	value := rtpool.CreateArray(rtV, int32(len(args)))
+	backing := value.GetValue()
+	for i, v := range args {
+		backing[i] = rtpool.GetOrMakeRTValueString(v)
+	}
+	scope := frame.GetScope()
+	paramName := cpool.ExpectConstant(fun.GetParamNameIndexes()[0], constants.ConstantTagUTF8String).(*constants.ConstantUTF8String).GetValue()
+	scope.DefineAndSet(paramName, value)
+
 	vm.callStack.Push(frame)
 
 	for vm.callStack.GetPointer() != -1 {
@@ -99,9 +167,15 @@ func (vm *VM) Run(moduleName string) {
 
 		opcode := code[ptr]
 		opcodeImpl := vm.opcodeMap[opcode]
+		if opcodeImpl == nil {
+			panic("Unimplemented opcode " + strconv.Itoa(int(opcode)))
+		}
 		opcodeImpl(vm, vm.currentFrame)
+		//vm.garbageCollector.Collect(vm)
 	}
 
+	//vm.garbageCollector.PrintGens()
+	vm.Panic("Exit")
 	vm.Halt(0)
 }
 
@@ -143,7 +217,7 @@ func (vm *VM) printBox(title string, contents string, boxChars string) (string, 
 	vbar := string(boxRunes[5])
 
 	contentsBuffer := ""
-	lines := strings.Split(contents, "\n")
+	lines := strings.Split(strings.ReplaceAll(contents, "\t", strings.Repeat(" ", 4)), "\n")
 	longestLine := utf8.RuneCountInString(title)
 	for _, line := range lines {
 		if utf8.RuneCountInString(line) > longestLine {
@@ -205,13 +279,15 @@ func (vm *VM) printBox(title string, contents string, boxChars string) (string, 
 }
 
 func (vm *VM) Panic(message string) {
+	errorOut = ""
+
 	var stackFrames []runtimeapi.Frame
 	for vm.callStack.GetPointer() != -1 {
 		frame := vm.callStack.Pop()
 		stackFrames = append(stackFrames, frame)
 	}
 
-	var stackValues []runtimeapi.Value
+	var stackValues []rtvalue.RTValue
 	for vm.stack.GetPointer() != -1 {
 		value := vm.stack.Pop()
 		stackValues = append(stackValues, value)
@@ -227,13 +303,17 @@ func (vm *VM) Panic(message string) {
 			printToBuf("└")
 		}
 
-		printToBuf("──> { Idx: #"+strconv.Itoa(i)+" Module: \"", frame.GetModuleName(), "\", Function: \"", frame.GetFunctionName(), "\" }\n")
+		printToBuf("──> { Idx: #"+strconv.Itoa(i)+" Module: \"", frame.GetModuleName(), "\", Function: \"", frame.GetFunctionName(), "\" }")
+
+		if i != lastFrameIdx {
+			printlnToBuf()
+		}
 	}
 	if len(stackFrames) == 0 {
 		printlnToBuf("└─(Empty Stack)")
 	}
 
-	printlnToBuf("")
+	printlnToBuf()
 
 	lastValueIdx := len(stackValues) - 1
 	printlnToBuf("┌[Value-Stack]")
@@ -245,10 +325,23 @@ func (vm *VM) Panic(message string) {
 			printToBuf("└")
 		}
 
-		printToBuf("─> { Idx: #"+strconv.Itoa(i)+" Value: ", strconv.Quote(value.String()), " }\n")
+		if value == nil {
+			printToBuf("─> { Idx: #" + strconv.Itoa(i) + ", Nil Stack Value }")
+		} else {
+			if value.GetTag() == 0 {
+				printToBuf("─> { Idx: #" + strconv.Itoa(i) + ", Broken Stack Value }")
+			} else {
+				printToBuf("─> { Idx: #"+strconv.Itoa(i)+", Type: "+value.GetType().String()+" Value: ", strconv.Quote(value.String()), " }")
+				value.DecRefCount()
+			}
+		}
+
+		if i != lastValueIdx {
+			printlnToBuf()
+		}
 	}
 	if len(stackValues) == 0 {
-		printlnToBuf("└──(Empty Stack)")
+		printToBuf("└──(Empty Stack)")
 	}
 
 	box1, width1 := vm.printBox("[ Panic Dump ]", errorOut, "╔╗╚╝═║")
@@ -317,4 +410,16 @@ func (vm *VM) SetStopCallback(f func()) {
 
 func (vm *VM) GetModuleCollection() runtimeapi.ModuleCollection {
 	return vm.moduleCollection
+}
+
+func (vm *VM) freePool() {
+	v := vm.GetRTValuePool().GetValues()
+	for _, a := range v {
+		if vm.allocator.IsInvalidOrFree(v) {
+			erroring.GlobalErrorHandler.Panic("RTValue Lifetime Error", "RTValue that was already free has been kept and freed twice!!")
+			return
+		}
+		a.OnFree()
+		vm.allocator.Free(a)
+	}
 }

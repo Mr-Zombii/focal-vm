@@ -78,11 +78,13 @@ func (mc *ModuleCollection) SearchForModule(moduleName string) (*spec.BCModule, 
 		if bytes != nil {
 			moduleReader := bcio.NewReader(bytes)
 			module := moduleReader.ReadModule()
-			module.SetName(moduleName)
+			if module.GetName() != moduleName {
+				return nil, fmt.Errorf("requested module name does not match found module's name, Expected: '%s', Found: '%s'", moduleName, module.GetName())
+			}
 			return module, nil
 		}
 	}
-	return nil, fmt.Errorf("Could not find module \"%s\" in the module-collection!", modulePath)
+	return nil, fmt.Errorf("could not find module \"%s\" in the module-collection", modulePath)
 }
 
 func (mc *ModuleCollection) SearchForModuleBytes(moduleName string) ([]byte, error) {

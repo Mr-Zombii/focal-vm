@@ -3,6 +3,7 @@ package opcore
 import (
 	"focal-vm/internal/bytecode/opcodes"
 	"focal-vm/internal/util"
+	"focal-vm/internal/vm/rtvalue"
 	"focal-vm/internal/vm/runtime/opload/opbool"
 	"focal-vm/public/runtimeapi"
 )
@@ -11,6 +12,7 @@ func Install_control_flow(opcodeMap []runtimeapi.OpcodeImpl) {
 	opcodeMap[opcodes.OP_HALT] = _instruction_halt
 	opcodeMap[opcodes.OP_JUMP] = _instruction_jump
 	opcodeMap[opcodes.OP_BRANCH] = _instruction_branch
+	opcodeMap[opcodes.OP_RET] = _instruction_return
 	opcodeMap[opcodes.OP_NOP] = func(runtimeapi.VM, runtimeapi.Frame) {}
 }
 
@@ -38,9 +40,28 @@ func _instruction_branch(vm runtimeapi.VM, frame runtimeapi.Frame) {
 
 	conditionValue := stack.Pop()
 	opbool.CheckBool(vm, conditionValue)
-	condition := conditionValue.GetRawValue().(bool)
+	condition := conditionValue.(*rtvalue.RTValueBool).GetValue()
 
-	if condition {
-		_instruction_jump(vm, frame)
+	ptr := frame.GetPtr()
+	code := *frame.GetCode()
+
+	flags := util.ReadU8LE(code, ptr)
+	ptr++
+
+	widthA := int32(flags&0x3) + 1
+
+	relativeJumpAddress := util.ReadVariableLEI32(code, ptr, widthA)
+	ptr += widthA
+
+	if !condition {
+		ptr += relativeJumpAddress
 	}
+	frame.SetPtr(ptr)
+	conditionValue.DecRefCount()
+}
+
+func _instruction_return(vm runtimeapi.VM, _ runtimeapi.Frame) {
+	callstack := vm.GetCallStack()
+	csv := callstack.Pop()
+	csv.GetScope().Reset()
 }

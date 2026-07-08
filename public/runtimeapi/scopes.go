@@ -1,18 +1,23 @@
 package runtimeapi
 
+import (
+	"focal-vm/internal/bytecode/bctypes"
+	"focal-vm/internal/vm/rtvalue"
+)
+
 type Scope interface {
 	HasLocal(string) bool
 	OwnsLocal(name string) bool
 
-	GetLocal(string) (Value, error)
-	SetLocal(string, Value) error
-	DefineAndSet(string, Value)
+	GetLocal(string) (rtvalue.RTValue, error)
+	SetLocal(string, rtvalue.RTValue) error
+	DefineAndSet(string, rtvalue.RTValue)
 
-	DefineLocal(string)
+	DefineLocal(string, bctypes.BCType)
 
 	NewChildScope() Scope
 	GetParent() Scope
 	Reset()
 
-	Visit(func(string, Value))
+	Visit(func(Scope, string, rtvalue.RTValue))
 }

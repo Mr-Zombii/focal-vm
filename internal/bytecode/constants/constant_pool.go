@@ -1,6 +1,9 @@
 package constants
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+)
 
 type ConstantPool struct {
 	constants []Constant
@@ -10,6 +13,10 @@ func NewConstantPool() *ConstantPool {
 	return &ConstantPool{
 		[]Constant{},
 	}
+}
+
+func (c *ConstantPool) String() string {
+	return fmt.Sprint(c.constants)
 }
 
 func (p *ConstantPool) Size() int32 {

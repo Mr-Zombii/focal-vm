@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"focal-vm/internal/bytecode/bctypes"
 	"focal-vm/internal/bytecode/constants"
 	"focal-vm/internal/bytecode/opcodes"
 	"focal-vm/internal/bytecode/spec"
@@ -13,6 +14,7 @@ type Frame struct {
 	moduleName   string
 	functionName string
 	cpool        *constants.ConstantPool
+	tpool        *bctypes.TypePool
 	code         []uint8
 	ptr          int32
 
@@ -37,6 +39,7 @@ func NewFrame(caller runtimeapi.Frame, parentScope runtimeapi.Scope, module *spe
 	frame.functionName = fn.GetName()
 	frame.moduleName = module.GetName()
 	frame.cpool = module.GetConstantPool()
+	frame.tpool = module.GetTypePool()
 	frame.scope = parentScope.NewChildScope()
 	frame.LoadFn(fn)
 	return frame
@@ -55,6 +58,7 @@ func (f *Frame) LoadFn(fn *spec.BCFunction) {
 	f.functionName = fn.GetName()
 	f.moduleName = fn.GetModule().GetName()
 	f.cpool = fn.GetModule().GetConstantPool()
+	f.tpool = fn.GetModule().GetTypePool()
 }
 
 func (f *Frame) GetCode() *[]uint8 {
@@ -71,6 +75,10 @@ func (f *Frame) GetPtr() int32 {
 
 func (f *Frame) GetConstantPool() *constants.ConstantPool {
 	return f.cpool
+}
+
+func (f *Frame) GetTypePool() *bctypes.TypePool {
+	return f.tpool
 }
 
 func (f *Frame) GetModuleName() string {

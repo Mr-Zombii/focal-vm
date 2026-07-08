@@ -3,198 +3,255 @@ package main
 import (
 	"archive/zip"
 	"focal-vm/internal/bytecode/bcio"
+	"focal-vm/internal/bytecode/bctypes"
 	"focal-vm/internal/bytecode/constants"
 	"focal-vm/internal/bytecode/opcodes"
 	"focal-vm/internal/bytecode/spec"
 	"os"
 )
 
+var modules []*spec.BCModule
+
+func newModule(moduleName string, action func(fnCreator func(modifier uint8, fnName string, fnType *bctypes.FunctionType, paramNames []string, code []uint8), module *spec.BCModule, tpool *bctypes.TypePool, cpool *constants.ConstantPool)) *spec.BCModule {
+	tpool := bctypes.NewTypePool()
+	cpool := constants.NewConstantPool()
+	module := spec.NewBCModule(1, 0, moduleName, tpool, cpool)
+	var functions []*spec.BCFunction
+	fnMaker := func(modifier uint8, fnName string, fnType *bctypes.FunctionType, paramNames []string, code []uint8) {
+		paramNameIndexes := make([]int32, len(paramNames))
+		for i, v := range paramNames {
+			paramNameIndexes[i] = cpool.GetOrCreateUTF8(v)
+		}
+		functions = append(functions, spec.NewBCFunction(module, modifier, cpool.GetOrCreateUTF8(fnName), tpool.AddType(fnType), paramNameIndexes, code))
+	}
+	action(fnMaker, module, tpool, cpool)
+	module.SetFunctions(functions)
+	modules = append(modules, module)
+	return module
+}
+
 func main() {
-	/*
-		fn fib(n) {
-			fn aux(m, a, b) {
-				if (m == 0) {
-					return a
-				}
-				return aux(m - 1, b, a + b)
-			}
-			return aux(n, 0, 1)
-		}
+	newModule("fibb", func(
+		fnCreator func(modifier uint8, fnName string, fnType *bctypes.FunctionType, paramNames []string, code []uint8),
+		module *spec.BCModule, tpool *bctypes.TypePool, cpool *constants.ConstantPool,
+	) {
+		_, i64TypeIdx := tpool.GetOrCreateI64Type()
+		fnType := bctypes.NewFunctionType(tpool, []int32{i64TypeIdx}, i64TypeIdx)
+		_, fnTypeIdx := tpool.GetOrCreateFunctionType(fnType)
+		fnCreator(0, "fibonacci", fnType, []string{"n"}, []uint8{
+			uint8(opcodes.OP_LOAD_CONST),
+			uint8(0),
+			uint8(cpool.GetOrCreateI64(1)),
 
-		fn main() {
-			print(fib(10))
-		}
-	*/
+			uint8(opcodes.OP_GET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("n")),
 
-	/*
-		fn fib$aux(m, a, b) {
-			if (m == 0) {
-				return a
-			}
-			return fib$aux(m - 1, b, a + b)
-		}
+			uint8(opcodes.OP_ILE),
 
-		fn fib(n) {
-			return fib$aux(n, 0, 1)
-		}
+			uint8(opcodes.OP_BRANCH),
+			uint8(0),
+			uint8(4),
 
-		fn main() {
-			print(fib(10))
-		}
-	*/
+			uint8(opcodes.OP_GET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("n")),
 
-	/*
-		fn fib$aux() {
-			OP_LSTORE1 0 // m
-			OP_LSTORE1 1 // a
-			OP_LSTORE1 2 // b
+			uint8(opcodes.OP_RET),
 
-			OP_LLOAD1 1 // a
-			OP_CLOAD1 4 // 0
-			OP_EQ
+			uint8(opcodes.OP_LOAD_CONST),
+			uint8(0),
+			uint8(cpool.GetOrCreateI64(1)),
 
-			OP_BRANCH
-				OP_CLOAD1 4 // 0
-				OP_RET
+			uint8(opcodes.OP_GET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("n")),
 
-			OP_LLOAD1 0 // m
-			OP_CLOAD1 5 // 1
-			OP_ISUB
+			uint8(opcodes.OP_ISUB),
 
-			OP_LLOAD1 2 // b
+			uint8(opcodes.OP_LOAD_STATIC_FUNCTION),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("fibb")),
+			uint8(cpool.GetOrCreateUTF8("fibonacci")),
+			uint8(fnTypeIdx),
+			uint8(opcodes.OP_CALL),
 
-			OP_LLOAD1 1 // a
-			OP_LLOAD1 2 // b
-			OP_IADD
+			uint8(opcodes.OP_LOAD_CONST),
+			uint8(0),
+			uint8(cpool.GetOrCreateI64(2)),
 
-			OP_CLOAD1 7 // fib$aux
-			OP_TCALL
-			OP_RET
-		}
+			uint8(opcodes.OP_GET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("n")),
 
-		fn fib() {
-			OP_LSTORE1 6 // n
+			uint8(opcodes.OP_ISUB),
 
-			OP_LLOAD1 6 // n
-			OP_CLOAD1 4 // 0
-			OP_CLOAD1 5 // 1
+			uint8(opcodes.OP_LOAD_STATIC_FUNCTION),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("fibb")),
+			uint8(cpool.GetOrCreateUTF8("fibonacci")),
+			uint8(fnTypeIdx),
+			uint8(opcodes.OP_CALL),
 
-			OP_CLOAD1 7 // fib$aux
-			OP_SCALL
-			OP_RET
-		}
+			uint8(opcodes.OP_IADD),
 
-		fn main() void {
-			OP_CLOAD1 9 // 10
-			OP_CLOAD1 8 // fib
-			OP_CALL
-		}
-	*/
+			uint8(opcodes.OP_RET),
+		})
 
-	/*
-		module test {
-			func loadMe() {
-				env["_builtin_print"]("Hi from \"test\" module")
-				value := env["_builtin_read_line"]()
-				env["_builtin_print"](env[value])
-				env["_builtin_print"]("\n")
-				return
-			}
-		}
+		fnType = bctypes.NewFunctionType(tpool, []int32{i64TypeIdx, i64TypeIdx, i64TypeIdx}, i64TypeIdx)
+		_, fnTypeIdx = tpool.GetOrCreateFunctionType(fnType)
+		fnCreator(0, "fibonacci", fnType, []string{"n", "a", "b"}, []uint8{
+			uint8(opcodes.OP_LOAD_CONST),
+			uint8(0),
+			uint8(cpool.GetOrCreateI64(0)),
 
-		module boostrap {
+			uint8(opcodes.OP_GET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("n")),
 
-			func main() {
-				env["_builtin_print"]("Hi from \"bootstrap\" module")
-				env["_builtin_print"]("\n")
-				loadMe()
+			uint8(opcodes.OP_EQ),
 
-				return
-			}
-		}
-	*/
+			uint8(opcodes.OP_BRANCH),
+			uint8(0),
+			uint8(4),
 
-	bcm2 := spec.NewBCModule(1, 0, "test", constants.NewConstantPool())
+			uint8(opcodes.OP_GET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("a")),
 
-	bcm2.SetFunctions([]*spec.BCFunction{spec.NewBCFunction(bcm2, bcm2.GetConstantPool().GetOrCreateUTF8("loadMe"), 0, []uint8{
-		uint8(opcodes.OP_LOAD_CONST),
-		uint8(0),
-		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("Hi from \"test\" module!\n")),
+			uint8(opcodes.OP_RET),
 
-		uint8(opcodes.OP_LOAD_CONST),
-		uint8(0),
-		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("_builtin_print")),
-		uint8(opcodes.OP_GET_LOCAL),
-		uint8(opcodes.OP_CALL),
+			uint8(opcodes.OP_LOAD_CONST),
+			uint8(0),
+			uint8(cpool.GetOrCreateI64(1)),
 
-		uint8(opcodes.OP_LOAD_CONST),
-		uint8(0),
-		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("_builtin_read_line")),
-		uint8(opcodes.OP_GET_LOCAL),
-		uint8(opcodes.OP_CALL),
+			uint8(opcodes.OP_GET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("n")),
 
-		uint8(opcodes.OP_LOAD_CONST),
-		uint8(0),
-		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("_builtin_print")),
-		uint8(opcodes.OP_GET_LOCAL),
-		uint8(opcodes.OP_CALL),
+			uint8(opcodes.OP_ISUB),
 
-		uint8(opcodes.OP_LOAD_CONST),
-		uint8(0),
-		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("\n")),
+			uint8(opcodes.OP_GET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("b")),
+			uint8(opcodes.OP_DUP),
 
-		uint8(opcodes.OP_LOAD_CONST),
-		uint8(0),
-		uint8(bcm2.GetConstantPool().GetOrCreateUTF8("_builtin_print")),
-		uint8(opcodes.OP_GET_LOCAL),
-		uint8(opcodes.OP_CALL),
+			uint8(opcodes.OP_GET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("a")),
 
-		uint8(opcodes.OP_RET),
-	})})
+			uint8(opcodes.OP_IADD),
 
-	bcm := spec.NewBCModule(1, 0, "testing.bootstrap", constants.NewConstantPool())
-	testIdx := uint32(bcm.GetConstantPool().GetOrCreateUTF8("test"))
-	loadMeIdx := uint32(bcm.GetConstantPool().GetOrCreateUTF8("loadMe"))
-	bcm.SetFunctions([]*spec.BCFunction{spec.NewBCFunction(bcm, bcm.GetConstantPool().GetOrCreateUTF8("main"), 0, []uint8{
-		uint8(opcodes.OP_LOAD_CONST),
-		uint8(0),
-		uint8(bcm.GetConstantPool().GetOrCreateUTF8("Hi from \"" + bcm.GetName() + "\" module!\n")),
+			uint8(opcodes.OP_LOAD_STATIC_FUNCTION),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("fibb")),
+			uint8(cpool.GetOrCreateUTF8("fibonacci")),
+			uint8(fnTypeIdx),
+			uint8(opcodes.OP_TCALL),
 
-		uint8(opcodes.OP_LOAD_CONST),
-		uint8(0),
-		uint8(bcm.GetConstantPool().GetOrCreateUTF8("_builtin_print")),
-		uint8(opcodes.OP_GET_LOCAL),
-		uint8(opcodes.OP_CALL),
+			uint8(opcodes.OP_RET),
+		})
 
-		uint8(opcodes.OP_LOAD_STATIC_FUNCTION),
-		uint8(0),
-		uint8(testIdx),
-		uint8(loadMeIdx),
-		uint8(opcodes.OP_CALL),
+	})
 
-		uint8(opcodes.OP_RET),
-	})})
+	newModule("test", func(
+		fnCreator func(modifier uint8, fnName string, fnType *bctypes.FunctionType, paramNames []string, code []uint8),
+		module *spec.BCModule, tpool *bctypes.TypePool, cpool *constants.ConstantPool,
+	) {
+		_, i64TypeIdx := tpool.GetOrCreateI64Type()
+		fnCreator(0, "loadMe", bctypes.NewFunctionType(tpool, []int32{}), []string{}, []uint8{
+			uint8(opcodes.OP_LOAD_CONST),
+			uint8(0),
+			uint8(cpool.GetOrCreateI64(15)),
+
+			uint8(opcodes.OP_LOAD_CONST),
+			uint8(0),
+			uint8(cpool.GetOrCreateI64(0)),
+
+			uint8(opcodes.OP_LOAD_CONST),
+			uint8(0),
+			uint8(cpool.GetOrCreateI64(1)),
+
+			uint8(opcodes.OP_LOAD_STATIC_FUNCTION),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("fibb")),
+			uint8(cpool.GetOrCreateUTF8("fibonacci")),
+			uint8(tpool.AddType(bctypes.NewFunctionType(tpool, []int32{i64TypeIdx, i64TypeIdx, i64TypeIdx}, i64TypeIdx))),
+			uint8(opcodes.OP_CALL),
+
+			uint8(opcodes.OP_RET),
+		})
+	})
+
+	mainModule := newModule("testing.boostrap", func(
+		fnCreator func(modifier uint8, fnName string, fnType *bctypes.FunctionType, paramNames []string, code []uint8),
+		module *spec.BCModule, tpool *bctypes.TypePool, cpool *constants.ConstantPool,
+	) {
+		_, i := tpool.GetOrCreateUTFStringType()
+		strArryIdx := tpool.AddType(bctypes.NewArrayType(tpool, i))
+		mainFnType := bctypes.NewFunctionType(tpool, []int32{strArryIdx})
+		tpool.AddType(mainFnType)
+
+		structTypeIdx := tpool.AddType(bctypes.NewStructType(tpool, "thing", strArryIdx))
+
+		fnCreator(0, "main", mainFnType, []string{"argv"}, []uint8{
+			uint8(opcodes.OP_STRUCT_NEW),
+			uint8(0),
+			uint8(structTypeIdx),
+
+			uint8(opcodes.OP_DUP),
+
+			uint8(opcodes.OP_DEFINE_GLOBAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("MyStruct")),
+			uint8(structTypeIdx),
+
+			uint8(opcodes.OP_SET_GLOBAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("MyStruct")),
+
+			uint8(opcodes.OP_GET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("argv")),
+
+			uint8(opcodes.OP_LOAD_CONST),
+			uint8(0),
+			uint8(cpool.GetOrCreateI32(0)),
+
+			uint8(opcodes.OP_STRUCT_SET_FIELD),
+
+			uint8(opcodes.OP_GET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("MyStruct")),
+
+			uint8(opcodes.OP_LOAD_STATIC_FUNCTION),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("test")),
+			uint8(cpool.GetOrCreateUTF8("loadMe")),
+			uint8(tpool.AddType(bctypes.NewFunctionType(tpool, []int32{}))),
+			uint8(opcodes.OP_CALL),
+			uint8(opcodes.OP_SWP),
+			uint8(opcodes.OP_POP),
+
+			uint8(opcodes.OP_RET),
+		})
+	})
 
 	os.Remove("focal-archive.zip")
 	archive, _ := os.Create("focal-archive.zip")
 	focalArchive := zip.NewWriter(archive)
 
-	writer := bcio.NewWriter(bcm)
-	writer.WriteModule()
-	out := writer.GetBytes()
+	for _, m := range modules {
+		writer := bcio.NewWriter(m)
+		writer.WriteModule()
+		out := writer.GetBytes()
 
-	f, _ := focalArchive.Create(bcm.GetFileName())
-	f.Write(out)
+		f, _ := focalArchive.Create(m.GetFileName())
+		f.Write(out)
+	}
 
-	writer2 := bcio.NewWriter(bcm2)
-	writer2.WriteModule()
-	out2 := writer2.GetBytes()
-
-	f, _ = focalArchive.Create(bcm2.GetFileName())
-	f.Write(out2)
-
-	f, _ = focalArchive.Create("focal-manifest.json")
-	f.Write([]byte("{ \"main-module\": \"" + bcm.GetName() + "\" }"))
+	f, _ := focalArchive.Create("focal-manifest.json")
+	f.Write([]byte("{ \"main-module\": \"" + mainModule.GetName() + "\" }"))
 
 	focalArchive.Close()
 	archive.Close()

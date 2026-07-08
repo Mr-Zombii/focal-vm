@@ -10,51 +10,51 @@ import (
 	"strconv"
 )
 
-type ScopeValue struct {
-	scope runtimeapi.Scope
-}
-
-func (v *ScopeValue) DefineField(name string) {
-	v.scope.DefineLocal(name)
-}
-
-func (v *ScopeValue) HasField(name string) bool {
-	return v.scope.OwnsLocal(name)
-}
-
-func (v *ScopeValue) SetField(name string, value runtimeapi.Value) error {
-	if !v.scope.OwnsLocal(name) {
-		return fmt.Errorf("Tried to set field on object when field was not defined!")
-	}
-	return v.scope.SetLocal(name, value)
-}
-
-func (v *ScopeValue) GetField(name string) (runtimeapi.Value, error) {
-	if !v.scope.OwnsLocal(name) {
-		return nil, fmt.Errorf("Tried to get field on object when field was not defined!")
-	}
-	return v.scope.GetLocal(name)
-}
-
-func NewScopeValue(scope runtimeapi.Scope) *ScopeValue {
-	return &ScopeValue{scope: scope}
-}
-
-func (v *ScopeValue) GetTag() runtimeapi.ValueTag {
-	return runtimeapi.ValueTagScope
-}
-
-func (v *ScopeValue) GetScope() runtimeapi.Scope {
-	return v.scope
-}
-
-func (v *ScopeValue) String() string {
-	return "ScopeValue"
-}
-
-func (v *ScopeValue) GetRawValue() interface{} {
-	return v.scope
-}
+//type ScopeValue struct {
+//	scope runtimeapi.Scope
+//}
+//
+//func (v *ScopeValue) DefineField(name string) {
+//	v.scope.DefineLocal(name)
+//}
+//
+//func (v *ScopeValue) HasField(name string) bool {
+//	return v.scope.OwnsLocal(name)
+//}
+//
+//func (v *ScopeValue) SetField(name string, value runtimeapi.Value) error {
+//	if !v.scope.OwnsLocal(name) {
+//		return fmt.Errorf("Tried to set field on object when field was not defined!")
+//	}
+//	return v.scope.SetLocal(name, value)
+//}
+//
+//func (v *ScopeValue) GetField(name string) (runtimeapi.Value, error) {
+//	if !v.scope.OwnsLocal(name) {
+//		return nil, fmt.Errorf("Tried to get field on object when field was not defined!")
+//	}
+//	return v.scope.GetLocal(name)
+//}
+//
+//func NewScopeValue(scope runtimeapi.Scope) *ScopeValue {
+//	return &ScopeValue{scope: scope}
+//}
+//
+//func (v *ScopeValue) GetTag() runtimeapi.ValueTag {
+//	return runtimeapi.ValueTagScope
+//}
+//
+//func (v *ScopeValue) GetScope() runtimeapi.Scope {
+//	return v.scope
+//}
+//
+//func (v *ScopeValue) String() string {
+//	return "ScopeValue"
+//}
+//
+//func (v *ScopeValue) GetRawValue() interface{} {
+//	return v.scope
+//}
 
 type NativeFunctionValue struct {
 	name      string
@@ -123,7 +123,7 @@ func (v *FunctionValue) GetFunction() *spec.BCFunction {
 }
 
 func (v *FunctionValue) String() string {
-	return v.function.GetModule().GetName() + " -> " + v.function.GetModule().GetConstantPool().GetConstant(v.function.GetNameIndex()).(*constants.ConstantUTF8String).GetValue()
+	return v.function.GetModule().GetName() + " -> " + v.function.GetModule().GetConstantPool().ExpectConstant(v.function.GetNameIndex(), constants.ConstantTagUTF8String).(*constants.ConstantUTF8String).GetValue()
 }
 
 func (v *FunctionValue) GetRawValue() interface{} {
@@ -151,7 +151,7 @@ func (v *ArrayValue) GetLength() int32 {
 }
 
 func (v *ArrayValue) String() string {
-	return fmt.Sprintf("%v", v.value)
+	return fmt.Sprintf("%s", v.value)
 }
 
 func (v *ArrayValue) GetRawValue() interface{} {

@@ -5,81 +5,112 @@ import (
 	"focal-vm/internal/bytecode/constants"
 	"focal-vm/internal/bytecode/opcodes"
 	"focal-vm/internal/bytecode/spec"
-	"focal-vm/internal/util"
+	"focal-vm/internal/vm/rtvalue"
 	"focal-vm/internal/vm/runtime"
+	"focal-vm/internal/vm/runtime/opload/opcore"
 	"focal-vm/public/runtimeapi"
-	"reflect"
 )
 
 func install_call_instructions(opcodeMap []runtimeapi.OpcodeImpl) {
 	opcodeMap[opcodes.OP_CALL] = execCALL
 	opcodeMap[opcodes.OP_TCALL] = execTCALL
-	opcodeMap[opcodes.OP_LOAD_STATIC_FUNCTION] = execLOAD_STATIC_FUNCTION
-}
-
-func execLOAD_STATIC_FUNCTION(vm runtimeapi.VM, frame runtimeapi.Frame) {
-	ptr := frame.GetPtr()
-	code := *frame.GetCode()
-
-	flags := util.ReadU8LE(code, ptr)
-	ptr++
-
-	widthA := int32(flags&0x3) + 1
-	widthB := int32((flags>>2)&0x3) + 1
-
-	modNameId := util.ReadVariableLEU32(code, ptr, widthA)
-	ptr += widthA
-	funNameId := util.ReadVariableLEU32(code, ptr, widthB)
-	ptr += widthB
-	frame.SetPtr(ptr)
-
-	modName := frame.GetConstantPool().GetConstant(int32(modNameId))
-	funName := frame.GetConstantPool().GetConstant(int32(funNameId))
-
-	if modName.GetTag() != constants.ConstantTagUTF8String {
-		vm.Panic("OP_LOAD_STATIC_FUNCTION: expected module-name to be a \"ConstantUTF8String\", not \"" + reflect.TypeOf(modName).Name())
-	}
-	if funName.GetTag() != constants.ConstantTagUTF8String {
-		vm.Panic("OP_LOAD_STATIC_FUNCTION: expected function-name to be a \"ConstantUTF8String\", not \"" + reflect.TypeOf(funName).Name())
-	}
-
-	modNameStr := modName.(*constants.ConstantUTF8String).GetValue()
-	funNameStr := funName.(*constants.ConstantUTF8String).GetValue()
-
-	callingModuleName := frame.GetModuleName()
-
-	mod := vm.LoadModule(modNameStr)
-	fn := mod.GetFunction(funNameStr)
-
-	if callingModuleName != modNameStr && fn.GetModifier()&spec.BCFunctionModPrivate != 0 {
-		vm.Panic(fmt.Sprintf("Function access violation, you cannot access the function \"%v\" from module \"%v\", it can only be accessed from its own module \"%v\"!", funNameStr, callingModuleName, modNameStr))
-	}
-
-	parentScope := vm.GetScope()
-	if fn.GetModifier()&spec.BCFunctionModSubFunc != 0 {
-		parentScope = frame.GetScope()
-	}
-
-	fnValue := runtime.NewFunction(parentScope, fn)
-	vm.GetValueStack().Push(fnValue)
 }
 
 func execTCALL(vm runtimeapi.VM, frame runtimeapi.Frame) {
 	stack := vm.GetValueStack()
 	fnValue := stack.Pop()
 
-	checkType(vm, fnValue, runtimeapi.ValueTagFunction)
+	opcore.CheckFunction(vm, fnValue)
 
-	fn := fnValue.(*runtime.FunctionValue)
-	frame.LoadFn(fn.GetFunction())
+	fn := fnValue.(*rtvalue.RTValueVMFunction)
+
+	bcFn := fn.GetFunction()
+	frame.LoadFn(bcFn)
+
+	module := bcFn.GetModule()
+	cpool := module.GetConstantPool()
+	fnType := bcFn.GetType()
+
+	scope := frame.GetScope()
+
+	paramIndexes := bcFn.GetParamNameIndexes()
+	paramTypeIndexes := fnType.GetParamTypeIndexes()
+	for i := len(paramIndexes) - 1; i > -1; i-- {
+		paramNameIndex := paramIndexes[i]
+		paramTypeIndex := paramTypeIndexes[i]
+
+		paramName := cpool.ExpectConstant(paramNameIndex, constants.ConstantTagUTF8String).(*constants.ConstantUTF8String).GetValue()
+		paramType := fnType.GetTypePool().GetType(paramTypeIndex)
+
+		stackValue := stack.Pop()
+		if !stackValue.GetType().Equals(paramType) {
+			vm.Panic(fmt.Sprintf("Function param type mismatch (Tail Call):\n"+
+				"\tStack value \"%s\", is type \"%s\" when type \"%s\" is expected for fn param { name: \"%s\", idx: \"%d\" } \n"+
+				"\n"+
+				"\tCallerFnModule: \"%v\", CallerFnName: \"%v\"\n"+
+				"\tFnModule: \"%s\", FnName: \"%s\", FnSignature: \"%s\"", stackValue, stackValue.GetType(), paramType, paramName, i,
+				frame.GetModuleName(), frame.GetFunctionName(),
+				module.GetName(), bcFn.GetName(), fnType))
+			return
+		}
+		scope.DefineLocal(paramName, paramType)
+		err := scope.SetLocal(paramName, stackValue)
+		if err != nil {
+			vm.Panic(err.Error())
+			return
+		}
+	}
 }
 
-func execCALL(vm runtimeapi.VM, frame runtimeapi.Frame) {
+func execCALL(vm runtimeapi.VM, callerFrame runtimeapi.Frame) {
 	stack := vm.GetValueStack()
+	callStack := vm.GetCallStack()
 	fnValue := stack.Pop()
 
-	checkType(vm, fnValue, runtimeapi.ValueTagFunction, runtimeapi.ValueTagForeignFunction, runtimeapi.ValueTagNativeFunction)
+	opcore.CheckFunction(vm, fnValue)
 
-	callable := fnValue.(runtimeapi.CallableValue)
-	callable.Call(vm)
+	fn := fnValue.(*rtvalue.RTValueVMFunction)
+	bcFn := fn.GetFunction()
+
+	parentScope := vm.GetScope()
+	if bcFn.GetModifier()&spec.BCFunctionModSubFunc != 0 {
+		parentScope = callerFrame.GetScope()
+	}
+
+	module := fn.GetFunction().GetModule()
+	frame := runtime.NewFrame(callerFrame, parentScope, module, bcFn)
+	scope := frame.GetScope()
+
+	cpool := module.GetConstantPool()
+	fnType := bcFn.GetType()
+
+	paramIndexes := bcFn.GetParamNameIndexes()
+	paramTypeIndexes := fnType.GetParamTypeIndexes()
+	for i := len(paramIndexes) - 1; i > -1; i-- {
+		paramNameIndex := paramIndexes[i]
+		paramTypeIndex := paramTypeIndexes[i]
+
+		paramName := cpool.ExpectConstant(paramNameIndex, constants.ConstantTagUTF8String).(*constants.ConstantUTF8String).GetValue()
+		paramType := fnType.GetTypePool().GetType(paramTypeIndex)
+
+		stackValue := stack.Pop()
+		if !stackValue.GetType().Equals(paramType) {
+			vm.Panic(fmt.Sprintf("Function param type mismatch:\n"+
+				"\tStack value \"%s\", is type \"%s\" when type \"%s\" is expected for fn param { name: \"%s\", idx: \"%d\" } \n"+
+				"\n"+
+				"\tCallerFnModule: \"%s\", CallerFnName: \"%s\"\n"+
+				"\tFnModule: \"%s\", FnName: \"%s\", FnSignature: \"%s\"", stackValue, stackValue.GetType(), paramType, paramName, i,
+				callerFrame.GetModuleName(), callerFrame.GetFunctionName(),
+				module.GetName(), bcFn.GetName(), fnType))
+			return
+		}
+		scope.DefineLocal(paramName, paramType)
+		err := scope.SetLocal(paramName, stackValue)
+		if err != nil {
+			vm.Panic(err.Error())
+			return
+		}
+	}
+
+	callStack.Push(frame)
 }

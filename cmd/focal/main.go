@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"encoding/json"
 	"fmt"
+	"focal-vm/internal/erroring"
 	"focal-vm/internal/vm"
 	"io"
 	"os"
@@ -37,16 +38,16 @@ func registerFlags() {
 		archive := os.Args[2]
 		zf, err := zip.OpenReader(archive)
 		if err != nil {
-			panic(err)
+			erroring.GlobalErrorHandler.Panic("CLI Module Launcher", err)
 		}
 
 		manifest, err := zf.Open("focal-manifest.json")
 		if err != nil {
-			panic(err)
+			erroring.GlobalErrorHandler.Panic("CLI Module Launcher", err)
 		}
 		manifestBytes, err := io.ReadAll(manifest)
 		if err != nil {
-			panic(err)
+			erroring.GlobalErrorHandler.Panic("CLI Module Launcher", err)
 		}
 		manifest.Close()
 		zf.Close()
@@ -58,7 +59,7 @@ func registerFlags() {
 		}
 		if mainModule, ok := data["main-module"].(string); ok {
 			fvm := vm.NewVM()
-			fmt.Printf("Loading module \"%v\"\n", mainModule)
+			fmt.Printf("Loading module \"%s\"\n", mainModule)
 			moduleCollection := fvm.GetModuleCollection()
 			moduleCollection.AddArchives(archive)
 
@@ -67,7 +68,7 @@ func registerFlags() {
 			fvm.GetModuleCollection()
 			return
 		}
-		fmt.Printf("Focal Archive \"%v\" does not have the \"main-module\" attribute in the manifest!\n")
+		fmt.Printf("Focal Archive \"%s\" does not have the \"main-module\" attribute in the manifest!\n", archive)
 
 	}
 	flagMap["-a"] = runArchiveFn

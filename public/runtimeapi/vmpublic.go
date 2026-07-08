@@ -3,6 +3,7 @@ package runtimeapi
 import (
 	"focal-vm/internal/bytecode/spec"
 	"focal-vm/internal/util"
+	"focal-vm/internal/vm/rtvalue"
 	"plugin"
 )
 
@@ -15,7 +16,8 @@ type VM interface {
 	LoadModule(string) *spec.BCModule
 	Run(string)
 	GetCallStack() *util.Stack[Frame]
-	GetValueStack() *util.Stack[Value]
+	GetValueStack() *util.Stack[rtvalue.RTValue]
+	GetRTValuePool() *rtvalue.RTValuePool
 	GetScope() Scope
 	GetLoadedPlugins() map[string]*plugin.Plugin
 	LoadPlugin(string) *plugin.Plugin

@@ -2,21 +2,15 @@ package opbool
 
 import (
 	"fmt"
-	"focal-vm/internal/vm/runtime"
+	"focal-vm/internal/bytecode/bctypes"
+	"focal-vm/internal/vm/rtvalue"
 	"focal-vm/public/runtimeapi"
 )
 
-func CheckBool(vm runtimeapi.VM, value runtimeapi.Value) {
-	if value.GetTag() == runtimeapi.ValueTagBoolean {
-		vm.Panic(fmt.Sprintf("Stack value should be a boolean type, not type %v", value.GetTag()))
+func CheckBool(vm runtimeapi.VM, value rtvalue.RTValue) {
+	if value.GetType().GetTag() != bctypes.BCTYPE_BOOLEAN {
+		vm.Panic(fmt.Sprintf("Stack value should be a boolean type, not type %s", value.GetType()))
 	}
-}
-
-func ToBoolValue(v bool) runtimeapi.Value {
-	if v {
-		return runtime.BOOLEAN_VALUE_TRUE
-	}
-	return runtime.BOOLEAN_VALUE_FALSE
 }
 
 /*
@@ -29,6 +23,7 @@ func ToBoolValue(v bool) runtimeapi.Value {
 */
 func _bool_instruction(vm runtimeapi.VM, action func(a bool, b bool) bool) {
 	stack := vm.GetValueStack()
+	rtpool := vm.GetRTValuePool()
 
 	aValue := stack.Pop()
 	bValue := stack.Pop()
@@ -36,8 +31,10 @@ func _bool_instruction(vm runtimeapi.VM, action func(a bool, b bool) bool) {
 	CheckBool(vm, aValue)
 	CheckBool(vm, bValue)
 
-	a := aValue.GetRawValue().(bool)
-	b := bValue.GetRawValue().(bool)
+	a := aValue.(*rtvalue.RTValueBool).GetValue()
+	b := bValue.(*rtvalue.RTValueBool).GetValue()
 
-	stack.Push(ToBoolValue(action(a, b)))
+	stack.Push(rtpool.GetOrMakeRTValueBool(action(a, b)))
+	aValue.DecRefCount()
+	bValue.DecRefCount()
 }

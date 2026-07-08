@@ -6,13 +6,19 @@ const (
 	OP_NOP        OpCode = iota
 	OP_LOAD_CONST        // ✅ Load constant
 
-	// Scope Instructions
+	// Local Scope Instructions
+	OP_DEFINE_LOCAL // ✅ Define local in current scope
+	OP_LOCAL_EXISTS // ✅ Check if local is defined in current or parent scope
+	OP_OWNS_LOCAL   // ✅ Check if local is owned by current scope
+	OP_SET_LOCAL    // ✅ Set local in current or parent scope
+	OP_GET_LOCAL    // ✅ Get local in current or parent scope
+
+	// Global Scope Instructions
 	OP_DEFINE_GLOBAL // ✅ Define local in global scope
-	OP_DEFINE_LOCAL  // ✅ Define local in current scope
-	OP_LOCAL_EXISTS  // ✅ Check if local is defined is current or parent scope
-	OP_OWNS_LOCAL    // ✅ Check if local is owned by current scope
-	OP_SET_LOCAL     // ✅ Set local in current or parent scope
-	OP_GET_LOCAL     // ✅ Get local in current or parent scope
+	OP_GLOBAL_EXISTS // ✅ Check if local is defined in global or global's parent scope
+	OP_OWNS_GLOBAL   // ✅ Check if local is owned by global scope
+	OP_SET_GLOBAL    // ✅ Set global in current or global's parent scope
+	OP_GET_GLOBAL    // ✅ Get global in current or global's parent scope
 
 	OP_LOAD_STATIC_FUNCTION // ✅ Load static function (a static function is one that is not held in any scope)
 
@@ -23,10 +29,20 @@ const (
 
 	// Object Instructions
 	OP_OBJECT_NEW          // ✅ Create New ScopeValue/ObjectValue
-	OP_OBJECT_SET_FIELD    // ✅ Set Obect Field
+	OP_OBJECT_SET_FIELD    // ✅ Set Object Field
 	OP_OBJECT_GET_FIELD    // ✅ Get Object Field
 	OP_OBJECT_DEFINE_FIELD // ✅ Define Object Field
 	OP_OBJECT_HAS_FIELD    // ✅ Define Object Field
+
+	// Tuple Instructions
+	OP_TUPLE_NEW       // ✅ Create New Tuple
+	OP_TUPLE_SET_VALUE // ✅ Get Tuple Set Value
+	OP_TUPLE_GET_VALUE // ✅ Get Tuple Get Value
+
+	// Object Instructions
+	OP_STRUCT_NEW       // ✅ Create New StructValue
+	OP_STRUCT_SET_FIELD // ✅ Set Struct Field
+	OP_STRUCT_GET_FIELD // ✅ Get Struct Field
 
 	// Stack
 	OP_DUP // ✅ Duplicate stack value

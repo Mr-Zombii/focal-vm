@@ -3,7 +3,8 @@ package oparray
 import (
 	"fmt"
 	"focal-vm/internal/bytecode/opcodes"
-	"focal-vm/internal/vm/runtime"
+	"focal-vm/internal/util"
+	"focal-vm/internal/vm/rtvalue"
 	"focal-vm/internal/vm/runtime/opload/opint"
 	"focal-vm/public/runtimeapi"
 )
@@ -23,14 +24,39 @@ func Install_array_instructions(opcodeMap []runtimeapi.OpcodeImpl) {
 */
 func _instruction_array_new(vm runtimeapi.VM, frame runtimeapi.Frame) {
 	stack := vm.GetValueStack()
+	rtpool := vm.GetRTValuePool()
+	tpool := frame.GetTypePool()
 
-	sizeValue := stack.Pop()
-	opint.CheckInt(vm, sizeValue)
+	lengthValue := stack.Pop()
+	opint.CheckInt(vm, lengthValue)
 
-	size := runtime.GetValueAsInt(sizeValue)
+	var length int32
+	switch lengthValue.GetTag() {
+	case rtvalue.RTValueTag_I8:
+		length = int32(lengthValue.(*rtvalue.RTValueI8).GetValue())
+	case rtvalue.RTValueTag_I16:
+		length = int32(lengthValue.(*rtvalue.RTValueI16).GetValue())
+	case rtvalue.RTValueTag_I32:
+		length = lengthValue.(*rtvalue.RTValueI32).GetValue()
+	default:
+		vm.Panic(fmt.Sprintf("Cannot use type \"%s\" for new array length!", lengthValue.GetType()))
+	}
+	lengthValue.DecRefCount()
 
-	backingArray := make([]runtimeapi.Value, size)
-	stack.Push(runtime.NewArrayValue(backingArray))
+	ptr := frame.GetPtr()
+	code := *frame.GetCode()
+
+	flags := util.ReadU8LE(code, ptr)
+	ptr++
+
+	width := int32(flags&0x3) + 1
+
+	elemTypeIdx := util.ReadVariableLEI32(code, ptr, width)
+	elemType := tpool.GetType(elemTypeIdx)
+	ptr += width
+	frame.SetPtr(ptr)
+
+	stack.Push(rtpool.CreateArray(elemType, length))
 }
 
 /*
@@ -41,17 +67,28 @@ func _instruction_array_new(vm runtimeapi.VM, frame runtimeapi.Frame) {
 [stack-out]:
 └─> arrayElement
 */
-func _instruction_array_load(vm runtimeapi.VM, frame runtimeapi.Frame) {
+func _instruction_array_load(vm runtimeapi.VM, _ runtimeapi.Frame) {
 	stack := vm.GetValueStack()
 
-	_array_instruction(vm, func(array *runtime.ArrayValue) {
+	_array_instruction(vm, func(array *rtvalue.RTValueArray) {
 		indexValue := stack.Pop()
 		opint.CheckInt(vm, indexValue)
 
-		index := runtime.GetValueAsInt(indexValue)
+		var index int32
+		switch indexValue.GetTag() {
+		case rtvalue.RTValueTag_I8:
+			index = int32(indexValue.(*rtvalue.RTValueI8).GetValue())
+		case rtvalue.RTValueTag_I16:
+			index = int32(indexValue.(*rtvalue.RTValueI16).GetValue())
+		case rtvalue.RTValueTag_I32:
+			index = indexValue.(*rtvalue.RTValueI32).GetValue()
+		default:
+			vm.Panic(fmt.Sprintf("Cannot use type \"%s\" for array index!", indexValue.GetType()))
+		}
+		indexValue.DecRefCount()
 
-		if len(array.GetValue())-1 < index || index < 0 {
-			vm.Panic(fmt.Sprintf("Index %v out of bounds for array size %v", index, array.GetLength()))
+		if int32(len(array.GetValue())-1) < index || index < 0 {
+			vm.Panic(fmt.Sprintf("Index %d out of bounds for array size %d", index, array.GetLength()))
 		}
 
 		stack.Push(array.GetValue()[index])
@@ -66,18 +103,34 @@ func _instruction_array_load(vm runtimeapi.VM, frame runtimeapi.Frame) {
 
 [stack-out]:
 */
-func _instruction_array_store(vm runtimeapi.VM, frame runtimeapi.Frame) {
+func _instruction_array_store(vm runtimeapi.VM, _ runtimeapi.Frame) {
 	stack := vm.GetValueStack()
 
-	_array_instruction(vm, func(array *runtime.ArrayValue) {
+	_array_instruction(vm, func(array *rtvalue.RTValueArray) {
 		indexValue := stack.Pop()
-		elementValue := stack.Pop()
 		opint.CheckInt(vm, indexValue)
 
-		index := runtime.GetValueAsInt(indexValue)
+		elementValue := stack.Pop()
+		if !elementValue.GetType().Equals(array.GetType()) {
+			vm.Panic(fmt.Sprintf("Cannot store value of type \"%s\" for in array of type \"%s\"", elementValue.GetType(), array.GetType()))
+			return
+		}
 
-		if len(array.GetValue())-1 < index || index < 0 {
-			vm.Panic(fmt.Sprintf("Index %v out of bounds for array size %v", index, array.GetLength()))
+		var index int32
+		switch indexValue.GetTag() {
+		case rtvalue.RTValueTag_I8:
+			index = int32(indexValue.(*rtvalue.RTValueI8).GetValue())
+		case rtvalue.RTValueTag_I16:
+			index = int32(indexValue.(*rtvalue.RTValueI16).GetValue())
+		case rtvalue.RTValueTag_I32:
+			index = indexValue.(*rtvalue.RTValueI32).GetValue()
+		default:
+			vm.Panic(fmt.Sprintf("Cannot use type \"%s\" for new array index!", indexValue.GetType()))
+		}
+		indexValue.DecRefCount()
+
+		if int32(len(array.GetValue())-1) < index || index < 0 {
+			vm.Panic(fmt.Sprintf("Index %d out of bounds for array size %d", index, array.GetLength()))
 		}
 
 		array.GetValue()[index] = elementValue

@@ -2,7 +2,6 @@ package opfloat
 
 import (
 	"focal-vm/internal/bytecode/opcodes"
-	"focal-vm/internal/vm/runtime"
 	"focal-vm/public/runtimeapi"
 )
 
@@ -15,40 +14,44 @@ func Install_float_arithmatic_instructions(opcodeMap []runtimeapi.OpcodeImpl) {
 
 func _instruction_fadd(vm runtimeapi.VM, _ runtimeapi.Frame) {
 	stack := vm.GetValueStack()
+	rtpool := vm.GetRTValuePool()
 
 	_float_instruction(vm, func(a, b float32) {
-		stack.Push(runtime.NewFloat32Value(a + b))
+		stack.Push(rtpool.GetOrMakeRTValueF32(a + b))
 	}, func(a, b float64) {
-		stack.Push(runtime.NewFloat64Value(a + b))
+		stack.Push(rtpool.GetOrMakeRTValueF64(a + b))
 	})
 }
 
 func _instruction_fsub(vm runtimeapi.VM, _ runtimeapi.Frame) {
 	stack := vm.GetValueStack()
+	rtpool := vm.GetRTValuePool()
 
 	_float_instruction(vm, func(a, b float32) {
-		stack.Push(runtime.NewFloat32Value(a - b))
+		stack.Push(rtpool.GetOrMakeRTValueF32(a - b))
 	}, func(a, b float64) {
-		stack.Push(runtime.NewFloat64Value(a - b))
+		stack.Push(rtpool.GetOrMakeRTValueF64(a - b))
 	})
 }
 
 func _instruction_fmul(vm runtimeapi.VM, _ runtimeapi.Frame) {
 	stack := vm.GetValueStack()
+	rtpool := vm.GetRTValuePool()
 
 	_float_instruction(vm, func(a, b float32) {
-		stack.Push(runtime.NewFloat32Value(a * b))
+		stack.Push(rtpool.GetOrMakeRTValueF32(a * b))
 	}, func(a, b float64) {
-		stack.Push(runtime.NewFloat64Value(a * b))
+		stack.Push(rtpool.GetOrMakeRTValueF64(a * b))
 	})
 }
 
 func _instruction_fdiv(vm runtimeapi.VM, _ runtimeapi.Frame) {
 	stack := vm.GetValueStack()
+	rtpool := vm.GetRTValuePool()
 
 	_float_instruction(vm, func(a, b float32) {
-		stack.Push(runtime.NewFloat32Value(a / b))
+		stack.Push(rtpool.GetOrMakeRTValueF32(a / b))
 	}, func(a, b float64) {
-		stack.Push(runtime.NewFloat64Value(a / b))
+		stack.Push(rtpool.GetOrMakeRTValueF64(a / b))
 	})
 }
