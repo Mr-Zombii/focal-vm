@@ -1,4 +1,4 @@
-package opint
+package opmath
 
 import (
 	"fmt"
@@ -7,65 +7,17 @@ import (
 	"focal-vm/public/runtimeapi"
 )
 
-func CheckInt(vm runtimeapi.VM, value rtvalue.RTValue) {
-	if _, ok := value.GetType().(*bctypes.IntegerType); !ok {
-		vm.Panic(fmt.Sprintf("Stack value should be an integer type, not type %s", value.GetType()))
+type Number = float32
+
+func CheckNumber(vm runtimeapi.VM, value rtvalue.RTValue) {
+	_, ok := value.GetType().(*bctypes.IntegerType)
+	_, ok2 := value.GetType().(*bctypes.FloatType)
+	if !(ok || ok2) {
+		vm.Panic(fmt.Sprintf("Stack value should be an integer or float type, not type %s", value.GetType()))
 	}
 }
 
-/*
-[stack-in]:
-├─> intValue A
-└─> intValue B
-
-[stack-out]:
-└─> intValue | boolValue
-*/
-func _int_instruction(
-	vm runtimeapi.VM, strict bool,
-	action8 func(a int8, b int8),
-	action16 func(a int16, b int16),
-	action32 func(a int32, b int32),
-	action64 func(a int64, b int64),
-) {
-	stack := vm.GetValueStack()
-
-	aValue := stack.Pop()
-	bValue := stack.Pop()
-
-	CheckInt(vm, aValue)
-	CheckInt(vm, bValue)
-
-	if aValue.GetTag() != bValue.GetTag() && strict {
-		vm.Panic("INT_OP: stack values a & b must be the same bit width, cannot mix 32 & 64")
-	}
-
-	switch aValue.GetTag() {
-	case rtvalue.RTValueTag_I8:
-		a := aValue.(*rtvalue.RTValueI8).GetValue()
-		b := bValue.(*rtvalue.RTValueI8).GetValue()
-		action8(a, b)
-	case rtvalue.RTValueTag_I16:
-		a := aValue.(*rtvalue.RTValueI16).GetValue()
-		b := bValue.(*rtvalue.RTValueI16).GetValue()
-		action16(a, b)
-	case rtvalue.RTValueTag_I32:
-		a := aValue.(*rtvalue.RTValueI32).GetValue()
-		b := bValue.(*rtvalue.RTValueI32).GetValue()
-		action32(a, b)
-	case rtvalue.RTValueTag_I64:
-		a := aValue.(*rtvalue.RTValueI64).GetValue()
-		b := bValue.(*rtvalue.RTValueI64).GetValue()
-		action64(a, b)
-	default:
-		panic("unhandled default case")
-	}
-
-	aValue.DecRefCount()
-	bValue.DecRefCount()
-}
-
-func _mixed_number_instruction(
+func _number_instruction(
 	vm runtimeapi.VM, strict bool,
 	action8 func(a int8, b int8),
 	action16 func(a int16, b int16),
@@ -79,8 +31,8 @@ func _mixed_number_instruction(
 	aValue := stack.Pop()
 	bValue := stack.Pop()
 
-	CheckInt(vm, aValue)
-	CheckInt(vm, bValue)
+	CheckNumber(vm, aValue)
+	CheckNumber(vm, bValue)
 
 	if aValue.GetTag() != bValue.GetTag() && strict {
 		vm.Panic("INT_OP: stack values a & b must be the same bit width, cannot mix 2 different bit widths nor mix float & int")

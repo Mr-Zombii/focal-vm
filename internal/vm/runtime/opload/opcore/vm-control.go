@@ -11,7 +11,7 @@ import (
 func Install_control_flow(opcodeMap []runtimeapi.OpcodeImpl) {
 	opcodeMap[opcodes.OP_HALT] = _instruction_halt
 	opcodeMap[opcodes.OP_JUMP] = _instruction_jump
-	opcodeMap[opcodes.OP_BRANCH] = _instruction_branch
+	opcodeMap[opcodes.OP_JUMP_IF_FALSE] = _instruction_branch
 	opcodeMap[opcodes.OP_RET] = _instruction_return
 	opcodeMap[opcodes.OP_NOP] = func(runtimeapi.VM, runtimeapi.Frame) {}
 }

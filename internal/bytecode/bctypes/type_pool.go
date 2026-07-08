@@ -186,6 +186,24 @@ func (p *TypePool) GetArrayType(reference *ArrayType) (BCType, int32) {
 	return nil, -1
 }
 
+func (p *TypePool) GetArrayTypeFromElemType(elem BCType) (BCType, int32) {
+	if elem == nil {
+		return nil, -1
+	}
+	elementTypeIndex := p.GetTypeIdx(elem)
+
+	if elementTypeIndex == -1 {
+		return nil, -1
+	}
+
+	for i, v := range p.bctypes {
+		if at, ok := v.(*ArrayType); ok && at.elementTypeIndex == elementTypeIndex {
+			return v, int32(i)
+		}
+	}
+	return nil, -1
+}
+
 func (p *TypePool) GetPointerType(reference *PointerType) (BCType, int32) {
 	if reference == nil {
 		return nil, -1
@@ -377,6 +395,19 @@ func (p *TypePool) GetOrCreateArrayType(reference *ArrayType) (BCType, int32) {
 	v, idx := p.GetArrayType(reference)
 	if idx == -1 {
 		_, i := p.CopyToPool(reference.tpool.GetType(reference.elementTypeIndex))
+		typ := NewArrayType(p, i)
+		return typ, p.AddType(typ)
+	}
+	return v, idx
+}
+
+func (p *TypePool) GetOrCreateArrayTypeFromElemType(elem BCType) (BCType, int32) {
+	if elem == nil {
+		return nil, -1
+	}
+	v, idx := p.GetArrayTypeFromElemType(elem)
+	if idx == -1 {
+		_, i := p.CopyToPool(elem)
 		typ := NewArrayType(p, i)
 		return typ, p.AddType(typ)
 	}

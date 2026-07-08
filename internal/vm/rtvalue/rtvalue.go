@@ -513,3 +513,64 @@ func newRTValueGOFunction(allocator allocator.Allocator, fnType *bctypes.Functio
 	v.self = v
 	return v
 }
+
+func ValueIsInteger(v RTValue) bool {
+	switch v.GetTag() {
+	case RTValueTag_I8:
+		return true
+	case RTValueTag_I16:
+		return true
+	case RTValueTag_I32:
+		return true
+	case RTValueTag_I64:
+		return true
+	default:
+		return false
+	}
+}
+
+func ValueIsFloat(v RTValue) bool {
+	switch v.GetTag() {
+	case RTValueTag_F32:
+		return true
+	case RTValueTag_F64:
+		return true
+	default:
+		return false
+	}
+}
+
+func GetValueAsInt(v RTValue) int {
+	switch v.GetTag() {
+	case RTValueTag_I8:
+		return int(v.(*RTValueI8).value)
+	case RTValueTag_I16:
+		return int(v.(*RTValueI16).value)
+	case RTValueTag_I32:
+		return int(v.(*RTValueI32).value)
+	case RTValueTag_I64:
+		return int(v.(*RTValueI64).value)
+	default:
+		return -1
+	}
+}
+
+func GetValueAsFloat64(v RTValue) float64 {
+	switch v.GetTag() {
+	case RTValueTag_F32:
+		return float64(v.(*RTValueF32).value)
+	case RTValueTag_F64:
+		return v.(*RTValueF64).value
+	default:
+		return -1
+	}
+}
+
+func GetValueAsFloat32(v RTValue) float32 {
+	switch v.GetTag() {
+	case RTValueTag_F32:
+		return v.(*RTValueF32).value
+	default:
+		return -1
+	}
+}

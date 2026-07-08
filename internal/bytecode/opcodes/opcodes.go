@@ -27,19 +27,7 @@ const (
 	OP_ARRAY_STORE // ✅ Store value in array at index
 	OP_ARRAY_LOAD  // ✅ Get value from array at index
 
-	// Object Instructions
-	OP_OBJECT_NEW          // ✅ Create New ScopeValue/ObjectValue
-	OP_OBJECT_SET_FIELD    // ✅ Set Object Field
-	OP_OBJECT_GET_FIELD    // ✅ Get Object Field
-	OP_OBJECT_DEFINE_FIELD // ✅ Define Object Field
-	OP_OBJECT_HAS_FIELD    // ✅ Define Object Field
-
-	// Tuple Instructions
-	OP_TUPLE_NEW       // ✅ Create New Tuple
-	OP_TUPLE_SET_VALUE // ✅ Get Tuple Set Value
-	OP_TUPLE_GET_VALUE // ✅ Get Tuple Get Value
-
-	// Object Instructions
+	// Struct Instructions
 	OP_STRUCT_NEW       // ✅ Create New StructValue
 	OP_STRUCT_SET_FIELD // ✅ Set Struct Field
 	OP_STRUCT_GET_FIELD // ✅ Get Struct Field
@@ -59,18 +47,18 @@ const (
 	OP_LAND // ✅ Logical AND
 	OP_LXOR // ✅ Logical XOR
 
-	// Integer Math
-	OP_IADD // ✅ Add Integer
-	OP_ISUB // ✅ Subtract Integer
-	OP_IMUL // ✅ Mutiply Integer
-	OP_IDIV // ✅ Divide Integer
-	OP_IMOD // ✅ Modulus
+	// Math
+	OP_ADD // ✅ Add
+	OP_SUB // ✅ Subtract
+	OP_MUL // ✅ Mutiply
+	OP_DIV // ✅ Divide
+	OP_MOD // ✅ Modulus
 
-	// Integer Logic & Comparison
-	OP_ILT // ✅ Less Than Integer
-	OP_IGT // ✅ Greater Than Integer
-	OP_ILE // ✅ Less Than Equals Integer
-	OP_IGE // ✅ Greater Than Equals Integer
+	// Logic & Comparison
+	OP_LT // ✅ Less Than
+	OP_GT // ✅ Greater Than
+	OP_LE // ✅ Less Than Equals
+	OP_GE // ✅ Greater Than Equals
 
 	// Integer Bitwise
 	OP_RSH  // ✅ Bit Shift Right
@@ -90,24 +78,12 @@ const (
 	OP_CONV_TO_F32 // ✅ Convert to F32
 	OP_CONV_TO_F64 // ✅ Convert to F64
 
-	// Float Math
-	OP_FADD // ✅ Add Float
-	OP_FSUB // ✅ Subtract Float
-	OP_FMUL // ✅ Mutiply Float
-	OP_FDIV // ✅ Divide Float
-
-	// Float Logic & Comparison
-	OP_FLT // ✅ Less Than Float
-	OP_FGT // ✅ Greater Than Float
-	OP_FLE // ✅ Less Than Equals Float
-	OP_FGE // ✅ Greater Than Equals Float
-
 	// Control Flow
-	OP_RET    // ✅ Return from Frame
-	OP_CALL   // ✅ Call on callable value
-	OP_TCALL  // ✅ Call on callable value and reuse frame
-	OP_JUMP   // ✅ Relative Jump
-	OP_BRANCH // ✅ Branch If False
+	OP_RET           // ✅ Return from Frame
+	OP_CALL          // ✅ Call on callable value
+	OP_TCALL         // ✅ Call on callable value and reuse frame
+	OP_JUMP          // ✅ Relative Jump
+	OP_JUMP_IF_FALSE // ✅ Branch If False
 
 	// VM & Native Control
 	OP_HALT // ✅ VM Exit

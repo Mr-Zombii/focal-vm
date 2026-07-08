@@ -24,36 +24,37 @@ import (
 )
 
 type VM struct {
-	stack            *util.Stack[rtvalue.RTValue]
-	callStack        *util.Stack[runtimeapi.Frame]
-	modMap           map[string]*spec.BCModule
-	opcodeMap        []runtimeapi.OpcodeImpl
-	currentFrame     runtimeapi.Frame
-	scope            runtimeapi.Scope
-	plugins          map[string]*plugin.Plugin
-	moduleCollection runtimeapi.ModuleCollection
-	garbageCollector *gc.GarbageCollector
-	allocator        allocator.Allocator
-	haltCallback     func()
+	stack             *util.Stack[rtvalue.RTValue]
+	callStack         *util.Stack[runtimeapi.Frame]
+	modMap            map[string]*spec.BCModule
+	opcodeMap         []runtimeapi.OpcodeImpl
+	currentFrame      runtimeapi.Frame
+	scope             runtimeapi.Scope
+	plugins           map[string]*plugin.Plugin
+	moduleCollection  runtimeapi.ModuleCollection
+	garbageCollector  *gc.GarbageCollector
+	allocator         allocator.Allocator
+	haltCallback      func()
+	firstModuleLoaded bool
 }
 
 func NewVM() runtimeapi.VM {
 	heap := allocator.NewAllocator(0)
 
 	vm := &VM{
-		stack:            util.NewStack[rtvalue.RTValue](256),
-		callStack:        util.NewStack[runtimeapi.Frame](256),
-		modMap:           map[string]*spec.BCModule{},
-		scope:            runtime.NewScope(),
-		plugins:          map[string]*plugin.Plugin{},
-		moduleCollection: NewModuleCollection(),
-		garbageCollector: gc.NewGarbageCollector(heap),
-		allocator:        heap,
-		haltCallback:     func() {},
+		stack:             util.NewStack[rtvalue.RTValue](256),
+		callStack:         util.NewStack[runtimeapi.Frame](256),
+		modMap:            map[string]*spec.BCModule{},
+		scope:             runtime.NewScope(),
+		plugins:           map[string]*plugin.Plugin{},
+		moduleCollection:  NewModuleCollection(),
+		garbageCollector:  gc.NewGarbageCollector(heap),
+		allocator:         heap,
+		haltCallback:      func() {},
+		firstModuleLoaded: false,
 	}
 
 	opload.InstallOpcodes(vm)
-	builtins.Register(vm.scope)
 
 	return vm
 }
@@ -88,6 +89,10 @@ func (vm *VM) LoadModule(moduleName string) *spec.BCModule {
 	}
 
 	vm.modMap[moduleName] = module
+	if !vm.firstModuleLoaded {
+		vm.firstModuleLoaded = true
+		builtins.Register(vm, vm.scope, module.GetTypePool())
+	}
 	return module
 }
 
@@ -292,6 +297,15 @@ func (vm *VM) Panic(message string) {
 		value := vm.stack.Pop()
 		stackValues = append(stackValues, value)
 	}
+
+	printlnToBuf("┌[Allocator]")
+	//printToBuf("├")
+	printToBuf("└")
+
+	printToBuf("──> { Backing Memory Size: " + strconv.Itoa(vm.allocator.GetTotalBackingSize()) + " }")
+
+	printlnToBuf()
+	printlnToBuf()
 
 	lastFrameIdx := len(stackFrames) - 1
 	printlnToBuf("┌[Call-Stack]")

@@ -7,7 +7,7 @@ import (
 )
 
 func CheckFunction(vm runtimeapi.VM, value rtvalue.RTValue) {
-	if value.GetTag() != rtvalue.RTValueTag_VMFUNCTION {
+	if value.GetTag() != rtvalue.RTValueTag_VMFUNCTION && value.GetTag() != rtvalue.RTValueTag_GOFUNCTION {
 		vm.Panic(fmt.Sprintf("Stack value should be of function type, not type %s", value.GetType()))
 	}
 }

@@ -47,9 +47,9 @@ func main() {
 			uint8(0),
 			uint8(cpool.GetOrCreateUTF8("n")),
 
-			uint8(opcodes.OP_ILE),
+			uint8(opcodes.OP_LE),
 
-			uint8(opcodes.OP_BRANCH),
+			uint8(opcodes.OP_JUMP_IF_FALSE),
 			uint8(0),
 			uint8(4),
 
@@ -67,7 +67,7 @@ func main() {
 			uint8(0),
 			uint8(cpool.GetOrCreateUTF8("n")),
 
-			uint8(opcodes.OP_ISUB),
+			uint8(opcodes.OP_SUB),
 
 			uint8(opcodes.OP_LOAD_STATIC_FUNCTION),
 			uint8(0),
@@ -84,7 +84,7 @@ func main() {
 			uint8(0),
 			uint8(cpool.GetOrCreateUTF8("n")),
 
-			uint8(opcodes.OP_ISUB),
+			uint8(opcodes.OP_SUB),
 
 			uint8(opcodes.OP_LOAD_STATIC_FUNCTION),
 			uint8(0),
@@ -93,7 +93,7 @@ func main() {
 			uint8(fnTypeIdx),
 			uint8(opcodes.OP_CALL),
 
-			uint8(opcodes.OP_IADD),
+			uint8(opcodes.OP_ADD),
 
 			uint8(opcodes.OP_RET),
 		})
@@ -111,7 +111,7 @@ func main() {
 
 			uint8(opcodes.OP_EQ),
 
-			uint8(opcodes.OP_BRANCH),
+			uint8(opcodes.OP_JUMP_IF_FALSE),
 			uint8(0),
 			uint8(4),
 
@@ -129,7 +129,7 @@ func main() {
 			uint8(0),
 			uint8(cpool.GetOrCreateUTF8("n")),
 
-			uint8(opcodes.OP_ISUB),
+			uint8(opcodes.OP_SUB),
 
 			uint8(opcodes.OP_GET_LOCAL),
 			uint8(0),
@@ -140,7 +140,7 @@ func main() {
 			uint8(0),
 			uint8(cpool.GetOrCreateUTF8("a")),
 
-			uint8(opcodes.OP_IADD),
+			uint8(opcodes.OP_ADD),
 
 			uint8(opcodes.OP_LOAD_STATIC_FUNCTION),
 			uint8(0),
@@ -162,7 +162,7 @@ func main() {
 		fnCreator(0, "loadMe", bctypes.NewFunctionType(tpool, []int32{}), []string{}, []uint8{
 			uint8(opcodes.OP_LOAD_CONST),
 			uint8(0),
-			uint8(cpool.GetOrCreateI64(15)),
+			uint8(cpool.GetOrCreateI64(92)),
 
 			uint8(opcodes.OP_LOAD_CONST),
 			uint8(0),
@@ -192,37 +192,37 @@ func main() {
 		mainFnType := bctypes.NewFunctionType(tpool, []int32{strArryIdx})
 		tpool.AddType(mainFnType)
 
-		structTypeIdx := tpool.AddType(bctypes.NewStructType(tpool, "thing", strArryIdx))
+		//structTypeIdx := tpool.AddType(bctypes.NewStructType(tpool, "thing", strArryIdx))
 
 		fnCreator(0, "main", mainFnType, []string{"argv"}, []uint8{
-			uint8(opcodes.OP_STRUCT_NEW),
-			uint8(0),
-			uint8(structTypeIdx),
+			//uint8(opcodes.OP_STRUCT_NEW),
+			//uint8(0),
+			//uint8(structTypeIdx),
+			//
+			//uint8(opcodes.OP_DUP),
 
-			uint8(opcodes.OP_DUP),
+			//uint8(opcodes.OP_DEFINE_GLOBAL),
+			//uint8(0),
+			//uint8(cpool.GetOrCreateUTF8("MyStruct")),
+			//uint8(structTypeIdx),
+			//
+			//uint8(opcodes.OP_SET_GLOBAL),
+			//uint8(0),
+			//uint8(cpool.GetOrCreateUTF8("MyStruct")),
+			//
+			//uint8(opcodes.OP_GET_LOCAL),
+			//uint8(0),
+			//uint8(cpool.GetOrCreateUTF8("argv")),
+			//
+			//uint8(opcodes.OP_LOAD_CONST),
+			//uint8(0),
+			//uint8(cpool.GetOrCreateI32(0)),
+			//
+			//uint8(opcodes.OP_STRUCT_SET_FIELD),
 
-			uint8(opcodes.OP_DEFINE_GLOBAL),
-			uint8(0),
-			uint8(cpool.GetOrCreateUTF8("MyStruct")),
-			uint8(structTypeIdx),
-
-			uint8(opcodes.OP_SET_GLOBAL),
-			uint8(0),
-			uint8(cpool.GetOrCreateUTF8("MyStruct")),
-
-			uint8(opcodes.OP_GET_LOCAL),
-			uint8(0),
-			uint8(cpool.GetOrCreateUTF8("argv")),
-
-			uint8(opcodes.OP_LOAD_CONST),
-			uint8(0),
-			uint8(cpool.GetOrCreateI32(0)),
-
-			uint8(opcodes.OP_STRUCT_SET_FIELD),
-
-			uint8(opcodes.OP_GET_LOCAL),
-			uint8(0),
-			uint8(cpool.GetOrCreateUTF8("MyStruct")),
+			//uint8(opcodes.OP_GET_LOCAL),
+			//uint8(0),
+			//uint8(cpool.GetOrCreateUTF8("MyStruct")),
 
 			uint8(opcodes.OP_LOAD_STATIC_FUNCTION),
 			uint8(0),
@@ -230,8 +230,8 @@ func main() {
 			uint8(cpool.GetOrCreateUTF8("loadMe")),
 			uint8(tpool.AddType(bctypes.NewFunctionType(tpool, []int32{}))),
 			uint8(opcodes.OP_CALL),
-			uint8(opcodes.OP_SWP),
-			uint8(opcodes.OP_POP),
+			//uint8(opcodes.OP_SWP),
+			//uint8(opcodes.OP_POP),
 
 			uint8(opcodes.OP_RET),
 		})

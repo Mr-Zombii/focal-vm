@@ -1,9 +1,10 @@
-package opint
+package opmath
 
 import (
 	"focal-vm/public/runtimeapi"
 )
 
 func Install_instructions(opcodeMap []runtimeapi.OpcodeImpl) {
-	Install_int_bitwise_instructions(opcodeMap)
+	Install_arithmatic_instructions(opcodeMap)
+	Install_relational_instructions(opcodeMap)
 }

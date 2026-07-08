@@ -1,12 +1,13 @@
 package builtins
 
 import (
+	"focal-vm/internal/bytecode/bctypes"
 	"focal-vm/public/runtimeapi"
 )
 
-func Register(scope runtimeapi.Scope) {
-	// RegisterLunno(scope)
-	// RegisterFocal(scope)
+func Register(vm runtimeapi.VM, scope runtimeapi.Scope, tpool *bctypes.TypePool) {
+	RegisterLunno(vm, scope, tpool)
+	// RegisterFocal(vm, scope, tpool)
 
 	//pluginloader := ffi.NewForeignFunction(func(v runtimeapi.VM, pluginNameValue runtimeapi.Value, fnSymbolValue runtimeapi.Value) {
 	//	pluginName := pluginNameValue.(*runtime.UTF8StringValue).GetValue()

@@ -21,6 +21,7 @@ type Allocator interface {
 	CopyString(ptr AnyPointer, v string) (*string, *byte)
 	String() string
 	FreeAllBlocks()
+	GetTotalBackingSize() int
 }
 
 type _Allocator struct {
@@ -111,7 +112,11 @@ func (a *_Allocator) GetBlock(ptr AnyPointer) *MemBlock {
 	return a.blockMap[GetPtr(ptr)]
 }
 
+var extraToExpandBy int32 = 0
+
 func (a *_Allocator) expand_backing(sizeToAlloc int32) {
+	sizeToAlloc += extraToExpandBy
+
 	//fmt.Println("Expanding Memory size of", a.bytesPreAllocated, "byte(s) by", sizeToAlloc, "byte(s) to", a.bytesPreAllocated+sizeToAlloc, "byte(s)")
 	a.memory = append(a.memory, make([]byte, sizeToAlloc)...)
 	a.bytesPreAllocated += sizeToAlloc
@@ -557,4 +562,8 @@ func (a *_Allocator) freeBlock(block *MemBlock) {
 	block.setFree(a, true)
 	delete(a.blockMap, block.Ptr)
 	a.zero(block)
+}
+
+func (a *_Allocator) GetTotalBackingSize() int {
+	return len(a.memory)
 }

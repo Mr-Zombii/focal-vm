@@ -3,13 +3,16 @@ package builtins
 import (
 	"bufio"
 	"fmt"
+	"focal-vm/internal/bytecode/bctypes"
+	"focal-vm/internal/vm/rtvalue"
+	"focal-vm/internal/vm/runtime/ffi"
 	"focal-vm/public/runtimeapi"
 	"math"
 	"os"
 	"strings"
 )
 
-func _builtin_print(stackValue runtimeapi.Value) {
+func _builtin_print(stackValue rtvalue.RTValue) {
 	if stackValue == nil {
 		print("nil")
 		return
@@ -64,18 +67,18 @@ func _builtin_to_lower(v string) string {
 	return strings.ToLower(v)
 }
 
-func RegisterLunno(scope runtimeapi.Scope) {
-	//scope.DefineAndSet("_builtin_print", ffi.NewForeignFunction(_builtin_print))
-	//scope.DefineAndSet("_builtin_read_line", ffi.NewForeignFunction(_builtin_read_line))
-	//scope.DefineAndSet("_builtin_panic", ffi.NewForeignFunction(_builtin_panic))
-	//
-	//scope.DefineAndSet("_builtin_floor", ffi.NewForeignFunction(_builtin_floor))
-	//scope.DefineAndSet("_builtin_ceil", ffi.NewForeignFunction(_builtin_ceil))
-	//
-	//scope.DefineAndSet("_builtin_str_concat", ffi.NewForeignFunction(_builtin_str_concat))
-	//scope.DefineAndSet("_builtin_strlen", ffi.NewForeignFunction(_builtin_strlen))
-	//scope.DefineAndSet("_builtin_substr", ffi.NewForeignFunction(_builtin_substr))
-	//scope.DefineAndSet("_builtin_char_at", ffi.NewForeignFunction(_builtin_char_at))
-	//scope.DefineAndSet("_builtin_to_upper", ffi.NewForeignFunction(_builtin_to_upper))
-	//scope.DefineAndSet("_builtin_to_lower", ffi.NewForeignFunction(_builtin_to_lower))
+func RegisterLunno(vm runtimeapi.VM, scope runtimeapi.Scope, tpool *bctypes.TypePool) {
+	scope.DefineAndSet("_builtin_print", ffi.NewForeignFunction(vm, tpool, _builtin_print))
+	//scope.DefineAndSet("_builtin_read_line", ffi.NewForeignFunction(vm, tpool, _builtin_read_line))
+	//scope.DefineAndSet("_builtin_panic", ffi.NewForeignFunction(vm, tpool, _builtin_panic))
+
+	scope.DefineAndSet("_builtin_floor", ffi.NewForeignFunction(vm, tpool, _builtin_floor))
+	scope.DefineAndSet("_builtin_ceil", ffi.NewForeignFunction(vm, tpool, _builtin_ceil))
+
+	scope.DefineAndSet("_builtin_str_concat", ffi.NewForeignFunction(vm, tpool, _builtin_str_concat))
+	scope.DefineAndSet("_builtin_strlen", ffi.NewForeignFunction(vm, tpool, _builtin_strlen))
+	scope.DefineAndSet("_builtin_substr", ffi.NewForeignFunction(vm, tpool, _builtin_substr))
+	scope.DefineAndSet("_builtin_char_at", ffi.NewForeignFunction(vm, tpool, _builtin_char_at))
+	scope.DefineAndSet("_builtin_to_upper", ffi.NewForeignFunction(vm, tpool, _builtin_to_upper))
+	scope.DefineAndSet("_builtin_to_lower", ffi.NewForeignFunction(vm, tpool, _builtin_to_lower))
 }

@@ -5,9 +5,9 @@ import (
 	"focal-vm/internal/vm/runtime/opload/oparray"
 	"focal-vm/internal/vm/runtime/opload/opbool"
 	"focal-vm/internal/vm/runtime/opload/opcore"
-	"focal-vm/internal/vm/runtime/opload/opfloat"
 	"focal-vm/internal/vm/runtime/opload/opgeneric"
 	"focal-vm/internal/vm/runtime/opload/opint"
+	"focal-vm/internal/vm/runtime/opload/opmath"
 	"focal-vm/internal/vm/runtime/opload/opobject"
 	"focal-vm/internal/vm/runtime/opload/opscope"
 	"focal-vm/internal/vm/runtime/opload/opstruct"
@@ -23,7 +23,7 @@ func InstallOpcodes(vm runtimeapi.VM) {
 	opcore.Install_instructions(opcodeMap)
 	oparray.Install_instructions(opcodeMap)
 	opbool.Install_instructions(opcodeMap)
-	opfloat.Install_instructions(opcodeMap)
+	opmath.Install_instructions(opcodeMap)
 	opgeneric.Install_instructions(opcodeMap)
 	opint.Install_instructions(opcodeMap)
 	opobject.Install_instructions(opcodeMap)

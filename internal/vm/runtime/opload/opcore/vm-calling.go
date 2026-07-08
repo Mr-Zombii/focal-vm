@@ -8,8 +8,8 @@ import (
 	"focal-vm/internal/bytecode/spec"
 	"focal-vm/internal/vm/rtvalue"
 	"focal-vm/internal/vm/runtime"
+	"focal-vm/internal/vm/runtime/ffi"
 	"focal-vm/public/runtimeapi"
-	"reflect"
 )
 
 func Install_call_instructions(opcodeMap []runtimeapi.OpcodeImpl) {
@@ -23,6 +23,15 @@ func _call_instruction(tail bool) runtimeapi.OpcodeImpl {
 		fnValue := stack.Pop()
 
 		CheckFunction(vm, fnValue)
+
+		if v, ok := fnValue.(*rtvalue.RTValueGOFunction); ok {
+			if tail {
+				vm.Panic("Cannot do a tail call on a native function!")
+				return
+			}
+			ffi.CallForeignFunction(vm, callerFrame.GetTypePool(), v.GetFunction())
+			return
+		}
 
 		var targetFrame runtimeapi.Frame
 
@@ -86,10 +95,4 @@ func _call_instruction(tail bool) runtimeapi.OpcodeImpl {
 
 		fnValue.DecRefCount()
 	}
-}
-
-func _call_instruction_go(vm runtimeapi.VM, callerFrame runtimeapi.Frame, fnValue *rtvalue.RTValueGOFunction) {
-	function := fnValue.GetFunction()
-	reflectValue := reflect.ValueOf(function)
-	reflectValue.Call([]reflect.Value{reflectValue})
 }

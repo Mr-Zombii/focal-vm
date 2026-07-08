@@ -1,6 +1,7 @@
 package builtins
 
 import (
+	"focal-vm/internal/bytecode/bctypes"
 	"focal-vm/public/runtimeapi"
 )
 
@@ -27,7 +28,7 @@ import (
 //	vm.GetLoadedModules()[moduleName] = module
 //}
 //
-//func _builtin_instance_module(vm runtimeapi.VM, moduleName string) runtimeapi.Value {
+//func _builtin_instance_module(vm runtimeapi.VM, moduleName string) rtvalue.RTValue {
 //	if !_builtin_module_defined(vm, moduleName) {
 //		vm.Panic(fmt.Sprintf("Failed to instance module \"%v\", module was not defined!", moduleName))
 //	}
@@ -36,7 +37,7 @@ import (
 //	return moduleToObject(vm.GetScope().NewChildScope(), module)
 //}
 //
-//func _builtin_unregistered_define_and_instance_module(vm runtimeapi.VM, moduleName string, moduleBytes []byte) runtimeapi.Value {
+//func _builtin_unregistered_define_and_instance_module(vm runtimeapi.VM, moduleName string, moduleBytes []byte) rtvalue.RTValue {
 //	reader := bcio.NewReader(moduleBytes)
 //	module := reader.ReadModule()
 //	return moduleToObject(vm.GetScope().NewChildScope(), module)
@@ -47,7 +48,7 @@ import (
 //	return ok
 //}
 //
-//func _builtin_registered_define_and_instance_module(vm runtimeapi.VM, moduleName string, moduleBytes []byte) runtimeapi.Value {
+//func _builtin_registered_define_and_instance_module(vm runtimeapi.VM, moduleName string, moduleBytes []byte) rtvalue.RTValue {
 //	if _builtin_module_defined(vm, moduleName) {
 //		vm.Panic(fmt.Sprintf("Module \"%v\" already defined in the VM!", moduleName))
 //		return nil
@@ -59,7 +60,7 @@ import (
 //	return moduleToObject(vm.GetScope().NewChildScope(), module)
 //}
 //
-//func _builtin_get_module(vm runtimeapi.VM, moduleName string) runtimeapi.Value {
+//func _builtin_get_module(vm runtimeapi.VM, moduleName string) rtvalue.RTValue {
 //	module := vm.GetLoadedModules()[moduleName]
 //	return moduleToObject(vm.GetScope().NewChildScope(), module)
 //}
@@ -81,7 +82,7 @@ import (
 //	return moduleObject
 //}
 
-func RegisterFocal(scope runtimeapi.Scope) {
+func RegisterFocal(vm runtimeapi.VM, scope runtimeapi.Scope, tpool *bctypes.TypePool) {
 	//scope.DefineAndSet("_builtin_load_module_bytes", ffi.NewForeignFunction(_builtin_load_module_bytes))
 	//scope.DefineAndSet("_builtin_define_module", ffi.NewForeignFunction(_builtin_define_module))
 	//scope.DefineAndSet("_builtin_get_module", ffi.NewForeignFunction(_builtin_get_module))
