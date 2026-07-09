@@ -68,17 +68,17 @@ func _builtin_to_lower(v string) string {
 }
 
 func RegisterLunno(vm runtimeapi.VM, scope runtimeapi.Scope, tpool *bctypes.TypePool) {
-	scope.DefineAndSet("_builtin_print", ffi.NewForeignFunction(vm, tpool, _builtin_print))
-	//scope.DefineAndSet("_builtin_read_line", ffi.NewForeignFunction(vm, tpool, _builtin_read_line))
-	//scope.DefineAndSet("_builtin_panic", ffi.NewForeignFunction(vm, tpool, _builtin_panic))
+	scope.DefineAndSet("_builtin_print", ffi.NewBuiltinFunction(vm, tpool, _builtin_print))
+	//scope.DefineAndSet("_builtin_read_line", ffi.NewBuiltinFunction(vm, tpool, _builtin_read_line))
+	//scope.DefineAndSet("_builtin_panic", ffi.NewBuiltinFunction(vm, tpool, _builtin_panic))
 
-	scope.DefineAndSet("_builtin_floor", ffi.NewForeignFunction(vm, tpool, _builtin_floor))
-	scope.DefineAndSet("_builtin_ceil", ffi.NewForeignFunction(vm, tpool, _builtin_ceil))
+	scope.DefineAndSet("_builtin_floor", ffi.NewBuiltinFunction(vm, tpool, _builtin_floor))
+	scope.DefineAndSet("_builtin_ceil", ffi.NewBuiltinFunction(vm, tpool, _builtin_ceil))
 
-	scope.DefineAndSet("_builtin_str_concat", ffi.NewForeignFunction(vm, tpool, _builtin_str_concat))
-	scope.DefineAndSet("_builtin_strlen", ffi.NewForeignFunction(vm, tpool, _builtin_strlen))
-	scope.DefineAndSet("_builtin_substr", ffi.NewForeignFunction(vm, tpool, _builtin_substr))
-	scope.DefineAndSet("_builtin_char_at", ffi.NewForeignFunction(vm, tpool, _builtin_char_at))
-	scope.DefineAndSet("_builtin_to_upper", ffi.NewForeignFunction(vm, tpool, _builtin_to_upper))
-	scope.DefineAndSet("_builtin_to_lower", ffi.NewForeignFunction(vm, tpool, _builtin_to_lower))
+	scope.DefineAndSet("_builtin_str_concat", ffi.NewBuiltinFunction(vm, tpool, _builtin_str_concat))
+	scope.DefineAndSet("_builtin_strlen", ffi.NewBuiltinFunction(vm, tpool, _builtin_strlen))
+	scope.DefineAndSet("_builtin_substr", ffi.NewBuiltinFunction(vm, tpool, _builtin_substr))
+	scope.DefineAndSet("_builtin_char_at", ffi.NewBuiltinFunction(vm, tpool, _builtin_char_at))
+	scope.DefineAndSet("_builtin_to_upper", ffi.NewBuiltinFunction(vm, tpool, _builtin_to_upper))
+	scope.DefineAndSet("_builtin_to_lower", ffi.NewBuiltinFunction(vm, tpool, _builtin_to_lower))
 }

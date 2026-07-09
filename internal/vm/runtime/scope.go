@@ -135,7 +135,9 @@ func (s *Scope) SetLocal(name string, v rtvalue.RTValue) error {
 func (s *Scope) Reset() {
 	for key := range s.locals {
 		v := s.locals[key]
-		v.DecRefCount()
+		if v != nil {
+			v.DecRefCount()
+		}
 		delete(s.locals, key)
 	}
 	for key := range s.definedLocals {

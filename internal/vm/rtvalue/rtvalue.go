@@ -334,7 +334,8 @@ func (v *RTValueString) GetLength() int32 {
 }
 
 func (v *RTValueString) String() string {
-	return "\"" + *v.value + "\""
+	//return "\"" + *v.value + "\""
+	return *v.value
 }
 
 func (v *RTValueString) Walk(f func(v RTValue)) {}
@@ -385,7 +386,9 @@ func (v *RTValueArray) OnFree() {
 	length := int32(len(values))
 	for i := range length {
 		val := values[i]
-		val.DecRefCount()
+		if val != nil {
+			val.DecRefCount()
+		}
 	}
 }
 

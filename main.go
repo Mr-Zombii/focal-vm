@@ -193,49 +193,124 @@ func main() {
 		tpool.AddType(mainFnType)
 
 		//structTypeIdx := tpool.AddType(bctypes.NewStructType(tpool, "thing", strArryIdx))
+		_, u64Ptr := tpool.GetOrCreateU64Type()
+
+		t64, u64 := tpool.GetOrCreateI64Type()
+		_, au64 := tpool.GetOrCreateArrayTypeFromElemType(t64)
 
 		fnCreator(0, "main", mainFnType, []string{"argv"}, []uint8{
-			//uint8(opcodes.OP_STRUCT_NEW),
-			//uint8(0),
-			//uint8(structTypeIdx),
-			//
-			//uint8(opcodes.OP_DUP),
+			// var programPtr
+			uint8(opcodes.OP_DEFINE_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("programPtr")),
+			uint8(u64Ptr),
 
-			//uint8(opcodes.OP_DEFINE_GLOBAL),
-			//uint8(0),
-			//uint8(cpool.GetOrCreateUTF8("MyStruct")),
-			//uint8(structTypeIdx),
-			//
-			//uint8(opcodes.OP_SET_GLOBAL),
-			//uint8(0),
-			//uint8(cpool.GetOrCreateUTF8("MyStruct")),
-			//
-			//uint8(opcodes.OP_GET_LOCAL),
-			//uint8(0),
-			//uint8(cpool.GetOrCreateUTF8("argv")),
-			//
-			//uint8(opcodes.OP_LOAD_CONST),
-			//uint8(0),
-			//uint8(cpool.GetOrCreateI32(0)),
-			//
-			//uint8(opcodes.OP_STRUCT_SET_FIELD),
+			// _builtin_load_foreign("D:\project-archive\golang\c-test\mycode")
+			uint8(opcodes.OP_LOAD_CONST),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("D:\\project-archive\\golang\\c-test\\mycode")),
+			uint8(opcodes.OP_GET_GLOBAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("_builtin_load_foreign")),
+			uint8(opcodes.OP_CALL),
 
-			//uint8(opcodes.OP_GET_LOCAL),
-			//uint8(0),
-			//uint8(cpool.GetOrCreateUTF8("MyStruct")),
+			// programPtr = _builtin_load_foreign("D:\project-archive\golang\c-test\mycode")
+			uint8(opcodes.OP_SET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("programPtr")),
 
-			uint8(opcodes.OP_LOAD_STATIC_FUNCTION),
+			// var test
+			uint8(opcodes.OP_DEFINE_LOCAL),
 			uint8(0),
 			uint8(cpool.GetOrCreateUTF8("test")),
-			uint8(cpool.GetOrCreateUTF8("loadMe")),
-			uint8(tpool.AddType(bctypes.NewFunctionType(tpool, []int32{}))),
+			uint8(au64),
+
+			// new array[2]
+			uint8(opcodes.OP_LOAD_CONST),
+			uint8(0),
+			uint8(cpool.GetOrCreateI32(2)),
+			uint8(opcodes.OP_ARRAY_NEW),
+			uint8(0),
+			uint8(u64),
+
+			// test = array
+			uint8(opcodes.OP_SET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("test")),
+
+			// array[0] = 1
+			uint8(opcodes.OP_LOAD_CONST),
+			uint8(0),
+			uint8(cpool.GetOrCreateI64(1)),
+
+			uint8(opcodes.OP_LOAD_CONST),
+			uint8(0),
+			uint8(cpool.GetOrCreateI32(0)),
+
+			uint8(opcodes.OP_GET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("test")),
+			uint8(opcodes.OP_ARRAY_STORE),
+
+			// array[1] = 2
+			uint8(opcodes.OP_LOAD_CONST),
+			uint8(0),
+			uint8(cpool.GetOrCreateI64(2)),
+
+			uint8(opcodes.OP_LOAD_CONST),
+			uint8(0),
+			uint8(cpool.GetOrCreateI32(1)),
+
+			uint8(opcodes.OP_GET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("test")),
+			uint8(opcodes.OP_ARRAY_STORE),
+
+			// load arguments
+			uint8(opcodes.OP_GET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("test")),
+
+			// load procName
+			uint8(opcodes.OP_LOAD_CONST),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("add")),
+
+			uint8(opcodes.OP_GET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("programPtr")),
+
+			// _builtin_call_sym_foreign(programPtr, "add", array)
+			uint8(opcodes.OP_GET_GLOBAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("_builtin_call_sym_foreign")),
 			uint8(opcodes.OP_CALL),
+
+			uint8(opcodes.OP_CONV_TO_I32),
+
 			uint8(opcodes.OP_GET_GLOBAL),
 			uint8(0),
 			uint8(cpool.GetOrCreateUTF8("_builtin_print")),
 			uint8(opcodes.OP_CALL),
-			//uint8(opcodes.OP_SWP),
-			//uint8(opcodes.OP_POP),
+
+			uint8(opcodes.OP_LOAD_CONST),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("\n")),
+
+			uint8(opcodes.OP_GET_GLOBAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("_builtin_print")),
+			uint8(opcodes.OP_CALL),
+
+			uint8(opcodes.OP_GET_LOCAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("programPtr")),
+
+			// _builtin_free_foreign(programPtr)
+			uint8(opcodes.OP_GET_GLOBAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("_builtin_free_foreign")),
+			uint8(opcodes.OP_CALL),
 
 			uint8(opcodes.OP_RET),
 		})

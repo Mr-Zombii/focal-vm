@@ -4,6 +4,7 @@ import (
 	"focal-vm/internal/bytecode/spec"
 	"focal-vm/internal/util"
 	"focal-vm/internal/vm/rtvalue"
+	"focal-vm/internal/vm/runtime/allocator"
 	"plugin"
 )
 
@@ -25,4 +26,5 @@ type VM interface {
 	Halt(int32)
 	SetStopCallback(f func())
 	GetModuleCollection() ModuleCollection
+	GetAllocator() allocator.Allocator
 }

@@ -17,7 +17,7 @@ func ReflectionValueToRuntimeValue(rtpool *rtvalue.RTValuePool, tpool *bctypes.T
 	case reflect.Uint:
 		return rtpool.GetOrMakeRTValueI64(int64(v.Uint())), nil
 	case reflect.Uintptr:
-		return rtpool.GetOrMakeRTValueI64(int64(v.Pointer())), nil
+		return rtpool.GetOrMakeRTValueI64(int64(v.Uint())), nil
 	case reflect.Pointer:
 		return rtpool.GetOrMakeRTValueI64(int64(v.Pointer())), nil
 	case reflect.UnsafePointer:

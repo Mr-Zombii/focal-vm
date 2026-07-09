@@ -2,6 +2,7 @@ package oparray
 
 import (
 	"fmt"
+	"focal-vm/internal/bytecode/bctypes"
 	"focal-vm/internal/bytecode/opcodes"
 	"focal-vm/internal/util"
 	"focal-vm/internal/vm/rtvalue"
@@ -111,7 +112,9 @@ func _instruction_array_store(vm runtimeapi.VM, _ runtimeapi.Frame) {
 		opint.CheckInt(vm, indexValue)
 
 		elementValue := stack.Pop()
-		if !elementValue.GetType().Equals(array.GetType()) {
+		arrayType := array.GetType().(*bctypes.ArrayType)
+		elemType := arrayType.GetTypePool().GetType(arrayType.GetElementTypeIndex())
+		if !elementValue.GetType().Equals(elemType) {
 			vm.Panic(fmt.Sprintf("Cannot store value of type \"%s\" for in array of type \"%s\"", elementValue.GetType(), array.GetType()))
 			return
 		}

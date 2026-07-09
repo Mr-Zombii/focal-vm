@@ -9,19 +9,15 @@ import (
 	goruntime "runtime"
 )
 
-func NewForeignFunction(vm runtimeapi.VM, tpool *bctypes.TypePool, fn interface{}) *rtvalue.RTValueGOFunction {
+func NewBuiltinFunction(vm runtimeapi.VM, tpool *bctypes.TypePool, fn interface{}) *rtvalue.RTValueGOFunction {
 	t, err := ReflectionTypeToRuntimeType(tpool, reflect.TypeOf(fn))
-	//v, err := ReflectionValueToRuntimeValue(vm.GetRTValuePool(), tpool, reflect.ValueOf(fn))
 	if err != nil {
 		vm.Panic(err.Error())
 	}
 	return vm.GetRTValuePool().CreateGOFunction(t, fn)
-	//return v.(*rtvalue.RTValueGOFunction)
-	//reflection := reflect.ValueOf(fn)
-	//return &ForeignFunctionValue{function: fn, reflected: reflection, name: goruntime.FuncForPC(reflection.Pointer()).Name()}
 }
 
-func CallForeignFunction(vm runtimeapi.VM, tpool *bctypes.TypePool, rawFn interface{}) {
+func CallBuiltinFunction(vm runtimeapi.VM, tpool *bctypes.TypePool, rawFn interface{}) {
 	fnValue := reflect.ValueOf(rawFn)
 	fnType := fnValue.Type()
 	if fnType.Kind() != reflect.Func {

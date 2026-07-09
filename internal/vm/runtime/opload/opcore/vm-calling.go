@@ -29,7 +29,7 @@ func _call_instruction(tail bool) runtimeapi.OpcodeImpl {
 				vm.Panic("Cannot do a tail call on a native function!")
 				return
 			}
-			ffi.CallForeignFunction(vm, callerFrame.GetTypePool(), v.GetFunction())
+			ffi.CallBuiltinFunction(vm, callerFrame.GetTypePool(), v.GetFunction())
 			return
 		}
 

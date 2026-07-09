@@ -38,6 +38,10 @@ type VM struct {
 	firstModuleLoaded bool
 }
 
+func (vm *VM) GetAllocator() allocator.Allocator {
+	return vm.allocator
+}
+
 func NewVM() runtimeapi.VM {
 	heap := allocator.NewAllocator(0)
 
