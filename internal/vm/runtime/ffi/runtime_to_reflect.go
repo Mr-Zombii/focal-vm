@@ -124,7 +124,7 @@ func RuntimeValueToReflectionValue(v rtvalue.RTValue, r reflect.Type) (reflect.V
 			return fmt.Errorf("Could not convert value to slice, %v", v)
 		case reflect.String:
 			if v.GetTag() == rtvalue.RTValueTag_STRING {
-				return v.(*rtvalue.RTValueString).GetValue()
+				return v.(*rtvalue.RTValueString).ToGoString()
 			}
 			return fmt.Errorf("could not convert value to string, %v", v)
 		default:

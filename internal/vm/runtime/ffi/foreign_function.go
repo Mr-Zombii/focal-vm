@@ -44,6 +44,7 @@ func CallBuiltinFunction(vm runtimeapi.VM, tpool *bctypes.TypePool, rawFn interf
 		paramIdxStart++
 	}
 
+	var valuesToDecrement []rtvalue.RTValue
 	var err error
 	for i := paramIdxStart; i < fnParamCount; i++ {
 		paramType := fnParamTypes[i]
@@ -52,6 +53,7 @@ func CallBuiltinFunction(vm runtimeapi.VM, tpool *bctypes.TypePool, rawFn interf
 			continue
 		}
 		value := vm.GetValueStack().Pop()
+		valuesToDecrement = append(valuesToDecrement, value)
 		var arg reflect.Value
 		if paramType.String() == "rtvalue.RTValue" {
 			arg = reflect.ValueOf(value)
@@ -63,7 +65,6 @@ func CallBuiltinFunction(vm runtimeapi.VM, tpool *bctypes.TypePool, rawFn interf
 			}
 		}
 		arguments = append(arguments, arg)
-
 	}
 
 	vm.GetCallStack().Push(runtime.NewPseudoFrame(vm.GetCallStack().GetTop(), vm.GetScope(), "{ Native-Function }", goruntime.FuncForPC(fnValue.Pointer()).Name()))
@@ -74,6 +75,7 @@ func CallBuiltinFunction(vm runtimeapi.VM, tpool *bctypes.TypePool, rawFn interf
 	} else {
 		returnValues = fnValue.Call(arguments)
 	}
+
 	for i := range returnValues {
 		returnValue := returnValues[i]
 		returnType := fnReturnTypes[i]
@@ -90,5 +92,9 @@ func CallBuiltinFunction(vm runtimeapi.VM, tpool *bctypes.TypePool, rawFn interf
 		}
 
 		vm.GetValueStack().Push(runtimeValue)
+	}
+
+	for _, v := range valuesToDecrement {
+		v.DecRefCount()
 	}
 }

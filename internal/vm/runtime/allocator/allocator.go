@@ -22,13 +22,17 @@ type Allocator interface {
 	String() string
 	FreeAllBlocks()
 	GetTotalBackingSize() int
+	CopyStringAsCStr(ptr AnyPointer, v string) *byte
+	GetAllocationCount() int32
+	GetTimesAllocCalled() int32
+	GetTimesFreeCalled() int32
 }
 
 type _Allocator struct {
 	bytesPreAllocated int32
 	memory            []byte
 	blocks            []*MemBlock
-	blockMap          map[unsafe.Pointer]*MemBlock
+	blockMap          map[uintptr]*MemBlock
 	furthestBlock     *MemBlock
 	blockCount        int
 	usedBlockCount    int
@@ -36,6 +40,9 @@ type _Allocator struct {
 	freedSpace        int32
 	usedSpace         int32
 	lastAvalibleIdx   int32
+	allocationCount   int32
+	timesAllocCalled  int32
+	timesFreeCalled   int32
 }
 
 func (a *_Allocator) FreeAllBlocks() {
@@ -71,6 +78,7 @@ func newMemBlock(a *_Allocator, ptr unsafe.Pointer, start int32, size int32) *Me
 	a.freedSpace -= size
 	a.usedSpace += size
 
+	a.blockMap[uintptr(block.Ptr)] = block
 	a.blocks = append(a.blocks, block)
 
 	return block
@@ -94,6 +102,7 @@ func (mv *MemBlock) setFree(a *_Allocator, doFree bool) {
 func (mv *MemBlock) deleteBlock(a *_Allocator) {
 	a.blocks = append(a.blocks[:mv.idx], a.blocks[mv.idx+1:]...)
 	a.blockCount--
+	delete(a.blockMap, uintptr(mv.Ptr))
 	mv.idx = -1
 	for i := range a.blocks {
 		a.blocks[i].idx = int32(i)
@@ -105,11 +114,11 @@ func (mb *MemBlock) String() string {
 }
 
 func NewAllocator(baseSize int32) Allocator {
-	return &_Allocator{bytesPreAllocated: baseSize, freedSpace: baseSize, memory: make([]byte, baseSize), blocks: []*MemBlock{}, blockMap: make(map[unsafe.Pointer]*MemBlock)}
+	return &_Allocator{bytesPreAllocated: baseSize, freedSpace: baseSize, memory: make([]byte, baseSize), blocks: []*MemBlock{}, blockMap: make(map[uintptr]*MemBlock)}
 }
 
 func (a *_Allocator) GetBlock(ptr AnyPointer) *MemBlock {
-	return a.blockMap[GetPtr(ptr)]
+	return a.blockMap[uintptr(GetPtr(ptr))]
 }
 
 var extraToExpandBy int32 = 0
@@ -178,7 +187,7 @@ func (a *_Allocator) realloc_freed_blocks(size int32) (*MemBlock, error) {
 	}
 
 	mainBlock.setFree(a, false)
-	a.blockMap[mainBlock.Ptr] = mainBlock
+	a.blockMap[uintptr(mainBlock.Ptr)] = mainBlock
 
 	return mainBlock, nil
 }
@@ -243,7 +252,21 @@ func (a *_Allocator) has_avalible_space_for_size(size int32) bool {
 // 	}
 // }
 
+func (a *_Allocator) GetAllocationCount() int32 {
+	return a.allocationCount
+}
+
+func (a *_Allocator) GetTimesAllocCalled() int32 {
+	return a.timesAllocCalled
+}
+
+func (a *_Allocator) GetTimesFreeCalled() int32 {
+	return a.timesFreeCalled
+}
+
 func (a *_Allocator) Alloc(size int32) unsafe.Pointer {
+	a.timesAllocCalled++
+	a.allocationCount++
 	if size == 8 {
 		block, _ := a.realloc_freed_blocks(size)
 		return block.Ptr
@@ -255,7 +278,7 @@ func (a *_Allocator) Alloc(size int32) unsafe.Pointer {
 		freeBlock := a.findFreeBlock(size)
 		if freeBlock != nil && freeBlock.Size != size {
 			freeBlock.setFree(a, false)
-			freeBlock = a.blockMap[a.Realloc(freeBlock.Ptr, size)]
+			freeBlock = a.blockMap[uintptr(a.Realloc(freeBlock.Ptr, size))]
 		}
 		if freeBlock != nil {
 			freeBlock.setFree(a, false)
@@ -301,14 +324,14 @@ func (a *_Allocator) Alloc(size int32) unsafe.Pointer {
 		a.furthestBlock = block
 	}
 
-	a.blockMap[unsafePtr] = block
+	a.blockMap[uintptr(unsafePtr)] = block
 
 	return unsafePtr
 }
 
 func (a *_Allocator) Realloc(ptr AnyPointer, size int32) unsafe.Pointer {
 	unsafePtr := GetPtr(ptr)
-	block := a.blockMap[unsafePtr]
+	block := a.blockMap[uintptr(unsafePtr)]
 	if block == nil {
 		panic("Tried to realloc unallocated blocks or freed blocks!")
 	}
@@ -344,7 +367,7 @@ func (a *_Allocator) Realloc(ptr AnyPointer, size int32) unsafe.Pointer {
 			block.Size = size
 			return unsafePtr
 		}
-		delete(a.blockMap, unsafePtr)
+		delete(a.blockMap, uintptr(unsafePtr))
 
 		freeBlock := a.findFreeBlock(size)
 		if freeBlock == nil {
@@ -352,7 +375,7 @@ func (a *_Allocator) Realloc(ptr AnyPointer, size int32) unsafe.Pointer {
 			newIdx := endBlock.start + endBlock.Size
 			a.zeroRaw(newIdx, size)
 			blockPtr := unsafe.Pointer(&a.memory[newIdx])
-			a.blockMap[blockPtr] = block
+			a.blockMap[uintptr(blockPtr)] = block
 			block.Size = size
 			block.Ptr = blockPtr
 			block.start = newIdx
@@ -362,7 +385,7 @@ func (a *_Allocator) Realloc(ptr AnyPointer, size int32) unsafe.Pointer {
 		if freeBlock.Size != size {
 			blockToUse, _ = a.split(freeBlock, size)
 		}
-		a.blockMap[blockToUse.Ptr] = blockToUse
+		a.blockMap[uintptr(blockToUse.Ptr)] = blockToUse
 		a.freeBlock(block)
 		return blockToUse.Ptr
 	}
@@ -393,7 +416,7 @@ func GetPtr(ptr AnyPointer) unsafe.Pointer {
 
 func (a *_Allocator) Zero(ptr AnyPointer) {
 	unsafePtr := GetPtr(ptr)
-	block := a.blockMap[unsafePtr]
+	block := a.blockMap[uintptr(unsafePtr)]
 	if block == nil {
 		panic("Tried to zero unallocated or free blocks!")
 	}
@@ -513,6 +536,32 @@ func GetTotalStringSize(v string) int32 {
 	return 2*(util.PointerSize) + int32(len(v))
 }
 
+func StrLen(ptr AnyPointer) int32 {
+	basePtr := GetPtr(ptr)
+	var offs int64 = 0
+	for {
+		value := *(*byte)(unsafe.Add(basePtr, offs))
+		if value == 0 {
+			break
+		}
+		offs++
+	}
+	return int32(offs)
+}
+
+func (a *_Allocator) CopyStringAsCStr(ptr AnyPointer, v string) *byte {
+	basePtr := GetPtr(ptr)
+	bytes := []byte(v)
+	for i, b := range bytes {
+		currentPtr := (*byte)(unsafe.Add(basePtr, i))
+		*currentPtr = b
+	}
+	endPtr := (*byte)(unsafe.Add(basePtr, len(bytes)))
+	*endPtr = 0
+
+	return (*byte)(basePtr)
+}
+
 func (a *_Allocator) CopyString(ptr AnyPointer, v string) (*string, *byte) {
 	strLen := len(v)
 	strBytes := []byte(v)
@@ -536,7 +585,7 @@ func (a *_Allocator) CopyString(ptr AnyPointer, v string) (*string, *byte) {
 }
 
 func (a *_Allocator) SizeOf(ptr AnyPointer) int32 {
-	block := a.blockMap[GetPtr(ptr)]
+	block := a.blockMap[uintptr(GetPtr(ptr))]
 	if block == nil {
 		panic("Tried to get size of unallocated blocks or freed blocks!")
 	}
@@ -544,12 +593,14 @@ func (a *_Allocator) SizeOf(ptr AnyPointer) int32 {
 }
 
 func (a *_Allocator) IsInvalidOrFree(ptr AnyPointer) bool {
-	block := a.blockMap[GetPtr(ptr)]
-	return block == nil
+	block := a.blockMap[uintptr(GetPtr(ptr))]
+	return block == nil || block.free
 }
 
 func (a *_Allocator) Free(ptr AnyPointer) {
-	block := a.blockMap[GetPtr(ptr)]
+	a.timesFreeCalled++
+	a.allocationCount--
+	block := a.blockMap[uintptr(GetPtr(ptr))]
 	if block == nil {
 		panic("Tried to free pointer that was not allocated or was already freed")
 	}
@@ -560,7 +611,6 @@ func (a *_Allocator) Free(ptr AnyPointer) {
 
 func (a *_Allocator) freeBlock(block *MemBlock) {
 	block.setFree(a, true)
-	delete(a.blockMap, block.Ptr)
 	a.zero(block)
 }
 

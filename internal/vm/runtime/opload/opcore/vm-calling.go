@@ -30,6 +30,7 @@ func _call_instruction(tail bool) runtimeapi.OpcodeImpl {
 				return
 			}
 			ffi.CallBuiltinFunction(vm, callerFrame.GetTypePool(), v.GetFunction())
+			v.DecRefCount()
 			return
 		}
 

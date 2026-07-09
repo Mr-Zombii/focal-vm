@@ -303,10 +303,18 @@ func (vm *VM) Panic(message string) {
 	}
 
 	printlnToBuf("┌[Allocator]")
-	//printToBuf("├")
-	printToBuf("└")
+	printToBuf("├")
 
 	printToBuf("──> { Backing Memory Size: " + strconv.Itoa(vm.allocator.GetTotalBackingSize()) + " }")
+	printlnToBuf()
+	printToBuf("├")
+	printToBuf("──> { Times Alloc Called: " + strconv.Itoa(int(vm.allocator.GetTimesAllocCalled())) + " }")
+	printlnToBuf()
+	printToBuf("├")
+	printToBuf("──> { Times Free Called: " + strconv.Itoa(int(vm.allocator.GetTimesFreeCalled())) + " }")
+	printlnToBuf()
+	printToBuf("└")
+	printToBuf("──> { Total Remaining Allocations: " + strconv.Itoa(int(vm.allocator.GetAllocationCount())) + " }")
 
 	printlnToBuf()
 	printlnToBuf()
@@ -401,6 +409,7 @@ func (vm *VM) indentStr(identWidth int32, v string) string {
 
 func (vm *VM) Halt(exitCode int32) {
 	vm.ResetStackPointers()
+	vm.freePool()
 	vm.haltCallback()
 	os.Exit(int(exitCode))
 }
@@ -433,10 +442,13 @@ func (vm *VM) GetModuleCollection() runtimeapi.ModuleCollection {
 func (vm *VM) freePool() {
 	v := vm.GetRTValuePool().GetValues()
 	for _, a := range v {
-		if vm.allocator.IsInvalidOrFree(v) {
-			erroring.GlobalErrorHandler.Panic("RTValue Lifetime Error", "RTValue that was already free has been kept and freed twice!!")
-			return
+		if vm.allocator.IsInvalidOrFree(a) {
+			//erroring.GlobalErrorHandler.Panic("RTValue Lifetime Error", "RTValue that was already free has been kept and freed twice!!")
+			//return
+			continue
 		}
+
+		//println("Freeing Stray Value \"" + a.String() + "\"")
 		a.OnFree()
 		vm.allocator.Free(a)
 	}

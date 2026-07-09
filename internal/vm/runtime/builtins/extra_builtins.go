@@ -67,10 +67,10 @@ func _builtin_to_lower(v string) string {
 	return strings.ToLower(v)
 }
 
-func RegisterLunno(vm runtimeapi.VM, scope runtimeapi.Scope, tpool *bctypes.TypePool) {
+func RegisterExtras(vm runtimeapi.VM, scope runtimeapi.Scope, tpool *bctypes.TypePool) {
 	scope.DefineAndSet("_builtin_print", ffi.NewBuiltinFunction(vm, tpool, _builtin_print))
-	//scope.DefineAndSet("_builtin_read_line", ffi.NewBuiltinFunction(vm, tpool, _builtin_read_line))
-	//scope.DefineAndSet("_builtin_panic", ffi.NewBuiltinFunction(vm, tpool, _builtin_panic))
+	scope.DefineAndSet("_builtin_read_line", ffi.NewBuiltinFunction(vm, tpool, _builtin_read_line))
+	scope.DefineAndSet("_builtin_panic", ffi.NewBuiltinFunction(vm, tpool, _builtin_panic))
 
 	scope.DefineAndSet("_builtin_floor", ffi.NewBuiltinFunction(vm, tpool, _builtin_floor))
 	scope.DefineAndSet("_builtin_ceil", ffi.NewBuiltinFunction(vm, tpool, _builtin_ceil))

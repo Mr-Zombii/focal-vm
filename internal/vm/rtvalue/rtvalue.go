@@ -6,6 +6,9 @@ import (
 	"focal-vm/internal/bytecode/spec"
 	"focal-vm/internal/erroring"
 	"focal-vm/internal/vm/runtime/allocator"
+	"reflect"
+	goruntime "runtime"
+	"strings"
 	"unsafe"
 )
 
@@ -124,6 +127,7 @@ func (v *rtValueHeader) IncRefCount() {
 }
 
 func (v *rtValueHeader) DecRefCount() {
+	//println("Decreased reference from " + strconv.Itoa(int(v.refCount)) + " to " + strconv.Itoa(int(v.refCount-1)) + " on object " + v.self.String())
 	v.refCount--
 	if v.refCount <= 0 {
 		v.pool.RemoveAndFree(v.poolIdx)
@@ -322,20 +326,32 @@ func newRTValueBool(allocator allocator.Allocator, value bool) *RTValueBool {
 
 type RTValueString struct {
 	rtValueHeader
-	value *string
+	value *byte
 }
 
-func (v *RTValueString) GetValue() string {
-	return *v.value
+func (v *RTValueString) ToGoString() string {
+	strBuilder := strings.Builder{}
+
+	length := allocator.StrLen(v.value)
+	basePtr := unsafe.Pointer(v.value)
+	for i := range length {
+		strBuilder.WriteByte(*(*byte)(unsafe.Add(basePtr, i)))
+	}
+
+	return strBuilder.String()
+}
+
+func (v *RTValueString) GetValue() *byte {
+	return v.value
 }
 
 func (v *RTValueString) GetLength() int32 {
-	return int32(len(*v.value))
+	return allocator.StrLen(v.value)
 }
 
 func (v *RTValueString) String() string {
 	//return "\"" + *v.value + "\""
-	return *v.value
+	return v.ToGoString()
 }
 
 func (v *RTValueString) Walk(f func(v RTValue)) {}
@@ -346,10 +362,11 @@ func (v *RTValueString) OnFree() {
 
 func newRTValueString(rtAllocator allocator.Allocator, value string) *RTValueString {
 	v := (*RTValueString)(rtAllocator.Alloc(RTValueTag_STRING_SIZE))
-	bStrPtr := rtAllocator.Alloc(allocator.GetTotalStringSize(value))
-	strPtr, _ := rtAllocator.CopyString(bStrPtr, value)
+	//bStrPtr := rtAllocator.Alloc(allocator.GetTotalStringSize(value))
+	bStrPtr := rtAllocator.Alloc(int32(len(value) + 1))
+	dataPtr := rtAllocator.CopyStringAsCStr(bStrPtr, value)
 
-	v.value = strPtr
+	v.value = dataPtr
 	v.tag = RTValueTag_STRING
 	v.typ = bctypes.UTF_STRING
 	v.self = v
@@ -501,7 +518,7 @@ func (v *RTValueGOFunction) GetFunction() interface{} {
 }
 
 func (v *RTValueGOFunction) String() string {
-	return "{ GOFunction }"
+	return "{ GOFunction (" + goruntime.FuncForPC(reflect.ValueOf(v.fnPointer).Pointer()).Name() + ") }"
 }
 
 func (v *RTValueGOFunction) Walk(f func(v RTValue)) {}

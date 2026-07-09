@@ -196,7 +196,7 @@ func (vp *RTValuePool) GetRTValueF64(value float64) *RTValueF64 {
 
 func (vp *RTValuePool) GetRTValueString(value string) *RTValueString {
 	for _, v := range vp.values {
-		if rt, ok := v.(*RTValueString); ok && rt.GetValue() == value {
+		if rt, ok := v.(*RTValueString); ok && rt.ToGoString() == value {
 			rt.IncRefCount()
 			return rt
 		}
