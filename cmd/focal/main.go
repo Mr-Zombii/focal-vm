@@ -59,7 +59,7 @@ func registerFlags() {
 		}
 		if mainModule, ok := data["main-module"].(string); ok {
 			fvm := vm.NewVM()
-			fmt.Printf("Loading module \"%s\"\n", mainModule)
+			//fmt.Printf("Loading module \"%s\"\n", mainModule)
 			moduleCollection := fvm.GetModuleCollection()
 			moduleCollection.AddArchives(archive)
 

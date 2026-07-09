@@ -180,7 +180,7 @@ func (vm *VM) Run(moduleName string) {
 	}
 
 	//vm.garbageCollector.PrintGens()
-	vm.Panic("Exit")
+	//vm.Panic("Exit")
 	vm.Halt(0)
 }
 

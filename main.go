@@ -230,6 +230,10 @@ func main() {
 			uint8(cpool.GetOrCreateUTF8("loadMe")),
 			uint8(tpool.AddType(bctypes.NewFunctionType(tpool, []int32{}))),
 			uint8(opcodes.OP_CALL),
+			uint8(opcodes.OP_GET_GLOBAL),
+			uint8(0),
+			uint8(cpool.GetOrCreateUTF8("_builtin_print")),
+			uint8(opcodes.OP_CALL),
 			//uint8(opcodes.OP_SWP),
 			//uint8(opcodes.OP_POP),
 
