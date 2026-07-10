@@ -182,7 +182,27 @@ func main() {
 			uint8(opcodes.OP_RET),
 		})
 	})
+	/*
+		package testing;
+		// boostrap.fbc
 
+		void main(string[] argv) {
+		  uint64 programPtr;
+		  programPtr = _builtin_load_foreign("D:\project-archive\golang\c-test\mycode");
+
+		  int64[] test;
+		  test = new int64[2];
+
+		  test[0] = 1;
+		  test[1] = 2;
+
+		  _builtin_print((int32)(_builtin_call_sym_foreign(programPtr, "add", array)));
+		  _builtin_print("\n");
+
+		  _builtin_free_foreign(programPtr);
+		  return;
+		}
+	*/
 	mainModule := newModule("testing.boostrap", func(
 		fnCreator func(modifier uint8, fnName string, fnType *bctypes.FunctionType, paramNames []string, code []uint8),
 		module *spec.BCModule, tpool *bctypes.TypePool, cpool *constants.ConstantPool,

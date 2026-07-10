@@ -7,7 +7,6 @@ import (
 	"focal-vm/internal/bytecode/spec"
 	"focal-vm/internal/erroring"
 	"focal-vm/internal/util"
-	"focal-vm/internal/vm/gc"
 	"focal-vm/internal/vm/rtvalue"
 	"focal-vm/internal/vm/runtime"
 	"focal-vm/internal/vm/runtime/allocator"
@@ -32,7 +31,7 @@ type VM struct {
 	scope             runtimeapi.Scope
 	plugins           map[string]*plugin.Plugin
 	moduleCollection  runtimeapi.ModuleCollection
-	garbageCollector  *gc.GarbageCollector
+	rtpool            *rtvalue.RTValuePool
 	allocator         allocator.Allocator
 	haltCallback      func()
 	firstModuleLoaded bool
@@ -52,7 +51,7 @@ func NewVM() runtimeapi.VM {
 		scope:             runtime.NewScope(),
 		plugins:           map[string]*plugin.Plugin{},
 		moduleCollection:  NewModuleCollection(),
-		garbageCollector:  gc.NewGarbageCollector(heap),
+		rtpool:            rtvalue.NewRTValuePool(heap),
 		allocator:         heap,
 		haltCallback:      func() {},
 		firstModuleLoaded: false,
@@ -101,7 +100,7 @@ func (vm *VM) LoadModule(moduleName string) *spec.BCModule {
 }
 
 func (vm *VM) GetRTValuePool() *rtvalue.RTValuePool {
-	return vm.garbageCollector.GetMainPool()
+	return vm.rtpool
 }
 
 type _VmErrorHandler struct {
